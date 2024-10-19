@@ -1,9 +1,3 @@
-SHOW VARIABLES LIKE 'innodb_buffer_pool_size';
-
-SHOW VARIABLES LIKE 'have_query_cache';
-
-SHOW VARIABLES LIKE 'query_cache_size';
-
 DROP DATABASE IF EXISTS library;
 
 CREATE DATABASE library;
@@ -142,9 +136,9 @@ CREATE INDEX idx_returnuserid ON History (UserID);
 
 
 -- roles
-DROP ROLE 'admin';
-DROP ROLE 'librarian';
-DROP ROLE 'reader';
+-- DROP ROLE 'admin';
+-- DROP ROLE 'librarian';
+-- DROP ROLE 'reader';
 
 CREATE ROLE 'admin';
 GRANT ALL PRIVILEGES ON library.* TO 'admin';
