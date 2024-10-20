@@ -8,4 +8,5 @@ This project uses **XAMPP** as the web server for its easy setup, cross-platform
 
 # Database Design
 The ERD for the library system is createdusing the free **Visual Paradigm Community Edition**.
-![Image of ERD](assets/Entity Relationship Diagram Library System.jpg)
+
+[Image of ERD](assets/Entity Relationship Diagram Library System.jpg)
