@@ -42,6 +42,22 @@ CREATE FULLTEXT INDEX idx_bookdescription ON Book(Description);
 CREATE INDEX idx_bookauthorid ON Book (AuthorID);
 
 CREATE TABLE
+  DeletedBook (
+    ID CHAR(38) PRIMARY KEY,
+    AuthorID CHAR(38) NULL,
+    CHECK (AuthorID != ''),
+    Title VARCHAR(100) NOT NULL,
+    CHECK (Title != ''),
+    Description VARCHAR(2000) NULL,
+    CHECK (Description != ''),
+    ISBN CHAR(17) NOT NULL UNIQUE,
+    CHECK (ISBN REGEXP '^(978|979)-[0-9]{1,5}-[0-9]{1,7}-[0-9]{1,7}-[0-9]$'),
+    FOREIGN KEY (AuthorID) REFERENCES Author (ID)
+      ON UPDATE CASCADE 
+      ON DELETE RESTRICT
+  ) ENGINE = InnoDB;
+
+CREATE TABLE
   `User` (
     ID CHAR(38) PRIMARY KEY DEFAULT CONCAT ('U-', UUID ()),
     Username VARCHAR(100) NOT NULL UNIQUE,
@@ -101,69 +117,27 @@ CREATE INDEX idx_loandate ON Loan (LoanDate);
 
 CREATE TABLE
   History (
-    BookID CHAR(38),
+    BookID CHAR(38) NULL,
     UserID CHAR(38) NOT NULL,
+    DeletedBookID CHAR(38) NULL,
     LoanDate TIMESTAMP NOT NULL,
     CHECK (LoanDate > '0000-00-00 00-00-00'),
     ReturnDate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (ReturnDate > '0000-00-00 00-00-00'),
-    PRIMARY KEY (BookID, UserID, LoanDate),
     FOREIGN KEY (BookID) REFERENCES Book (ID)
       ON UPDATE CASCADE
-      ON DELETE CASCADE,
+      ON DELETE SET NULL,
     FOREIGN KEY (UserID) REFERENCES `User` (ID) 
       ON UPDATE CASCADE
-      ON DELETE CASCADE
+      ON DELETE CASCADE,
+    FOREIGN KEY (DeletedBookID) REFERENCES DeletedBook (ID)
+      ON UPDATE CASCADE
+      ON DELETE RESTRICT
   ) ENGINE = InnoDB;
 
 CREATE INDEX idx_returnbookid ON History (BookID);
 
 CREATE INDEX idx_returnuserid ON History (UserID);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
--- roles
--- DROP ROLE 'admin';
--- DROP ROLE 'librarian';
--- DROP ROLE 'reader';
-
-CREATE ROLE 'admin';
-GRANT ALL PRIVILEGES ON library.* TO 'admin';
-
-CREATE ROLE 'librarian';
-GRANT SELECT, INSERT, UPDATE, DELETE ON library.Author TO 'librarian';
-GRANT SELECT, INSERT, UPDATE, DELETE ON library.Book TO 'librarian';
-GRANT SELECT, DELETE ON library.Loan TO 'librarian';
-
-CREATE ROLE 'reader';
-GRANT SELECT, INSERT, UPDATE, DELETE ON library.User TO 'reader';
-GRANT SELECT, INSERT, DELETE ON library.Reservation TO 'reader';
-GRANT SELECT, INSERT ON library.Loan TO 'reader';
-GRANT SELECT ON library.History TO 'reader';
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -544,84 +518,17 @@ BEGIN
 
 END $$
 
+CREATE TRIGGER saveDeletedBook
+  BEFORE DELETE
+  ON Book
+FOR EACH ROW
+BEGIN
+  INSERT INTO DeletedBook (ID, AuthorID, Title, Description, ISBN)
+  VALUES (OLD.ID, OLD.AuthorID, OLD.Title, OLD.Description, OLD.ISBN);
+
+  UPDATE History
+    SET DeletedBookID = OLD.ID
+    WHERE History.BookID = OLD.ID;
+END $$
 
 DELIMITER ;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
--- import csv
-CREATE TABLE
-  Imported (
-    OldBookID CHAR(4),
-    BookTitle VARCHAR(100),
-    AuthorName VARCHAR(50),
-    AuthorBirthdate VARCHAR(10),
-    ISBN CHAR(17),
-    OldUserID CHAR(4),
-    UserName VARCHAR(50),
-    UserAddress VARCHAR(200),
-    LoanDate VARCHAR(10),
-    ReturnDate VARCHAR(10)
-) ENGINE = InnoDB;
-
-LOAD DATA INFILE 'C:/Users/kenne/Downloads/unnormalized_library_data(in).csv'
-  INTO TABLE Imported
-  FIELDS TERMINATED BY ',' ENCLOSED BY '"'
-  LINES TERMINATED BY '\n'
-  IGNORE 1 LINES;
-
-INSERT INTO Author (Name, Birthdate)
-SELECT DISTINCT AuthorName, STR_TO_DATE(AuthorBirthdate, '%m/%d/%y') 
-FROM Imported
-ON DUPLICATE KEY UPDATE Name=Name;
-
-INSERT INTO Book (AuthorID, Title, ISBN, Stock, InitialStock)
-SELECT DISTINCT
-  Author.ID,
-  Imported.BookTitle,
-  Imported.ISBN,
-  @random_number := FLOOR(1+(RAND() * 15)),
-  @random_number 
-FROM Imported
-LEFT JOIN Author
-  ON Author.Name = Imported.AuthorName
-  AND Author.Birthdate = STR_TO_DATE(Imported.AuthorBirthdate, '%m/%d/%y')
-WHERE Author.ID IS NOT NULL
-ON DUPLICATE KEY UPDATE Title=Title;
-
-INSERT INTO `User` (Username, Name, Address, Password)
-SELECT DISTINCT 
-  LOWER(REPLACE(Imported.UserName, ' ', '')), 
-  Imported.UserName, 
-  UserAddress, 
-  SHA2(LOWER(REPLACE(Imported.UserName, ' ', '')), 256)
-FROM Imported
-ON DUPLICATE KEY UPDATE User.Username=User.Username;
-
-INSERT INTO History (BookID, UserID, LoanDate, ReturnDate)
-SELECT
-  Book.ID,
-  User.ID,
-  STR_TO_DATE(Imported.LoanDate, '%m/%d/%y'),
-  STR_TO_DATE(Imported.ReturnDate, '%m/%d/%y')
-FROM Imported
-LEFT JOIN Book
-  ON Book.ISBN = Imported.ISBN
-LEFT JOIN User 
-  ON User.Username = LOWER(REPLACE(Imported.UserName, ' ', ''))
-WHERE Book.ID IS NOT NULL AND User.ID IS NOT NULL;
-
-DROP TABLE Imported;
