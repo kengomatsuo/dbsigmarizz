@@ -7,7 +7,6 @@ This is a repository to store and document the process and results of creating a
 This project uses **XAMPP** as the web server for its easy setup, cross-platform support and easily usable interface to manage the built-in MySQL (MariaDB) database system. XAMPP is ideal for testing web development as it provides an isolated thus safe web application development environment, in case the projec is to be extended into a web application.
 
 # Database Design
-The ERD for the library system is createdusing the free **Visual Paradigm Community Edition**.
 ![ERD](assets/erd.png)
 This ERD represents the schema for a Library Management System designed to manage books, users, loans, reservations, and author information.
 
