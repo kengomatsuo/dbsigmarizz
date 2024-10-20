@@ -1,7 +1,8 @@
-# Introduction to DBSigmaRizz
-This is a repository to store and document the process and results of creating a library database system from an unnormalized dataset file.
+# Library Management System - Road to Sigma Rizz DBA, for B27 database technology CS GC.
+This is a repository to store and document the process and results of creating a library database system from an unnormalized dataset file. This project is developed as part of the B26 Database Technology course. It involves designing and implementing a comprehensive database management system (DBMS) for a library. The system covers all core aspects of DBMS, from storage management and memory optimization to transactions, indexing, and security.
 
-[Unnormalized Library Data](unnormalized_library_data(in).csv)
+## Resources
+- [Unnormalized Library Data](unnormalized_library_data(in).csv)
 
 ## Setup
 This project uses **XAMPP** as the web server for its easy setup, cross-platform support and easily usable interface to manage the built-in MySQL (MariaDB) database system. XAMPP is ideal for testing web development as it provides an isolated thus safe web application development environment, in case the projec is to be extended into a web application.
