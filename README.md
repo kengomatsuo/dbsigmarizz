@@ -28,8 +28,6 @@ This ERD represents the schema for a Library Management System designed to manag
     CHECK (Birthdate > '0000-00-00'),
     UNIQUE (Name, Birthdate)
   ) ENGINE = InnoDB;
-  
-  CREATE INDEX idx_authorid ON Author (ID);
   ```
 - **Relationships**:
   - Each `Author` can write multiple `Books`.
@@ -63,12 +61,6 @@ This ERD represents the schema for a Library Management System designed to manag
       ON DELETE RESTRICT,
     InitialStock INTEGER (10) NOT NULL
   ) ENGINE = InnoDB;
-
-  CREATE INDEX idx_booktitle ON Book (Title);
-
-  CREATE FULLTEXT INDEX idx_bookdescription ON Book(Description);
-
-  CREATE INDEX idx_bookauthorid ON Book (AuthorID);
   ```
 - **Relationships**:
   - Each `Book` is associated with one `Author` but can have multiple `Loans` and `Reservations`.
@@ -123,8 +115,6 @@ CREATE TABLE
     `Password` CHAR(64) NOT NULL,
     CHECK (CHAR_LENGTH(`Password`) = 64)
   ) ENGINE = InnoDB;
-
-  CREATE INDEX idx_userid ON `User` (ID);
   ```
 - **Relationships**:
   - Each `User` can borrow multiple `Books` (via `Loan`), and reserve multiple `Books` (via `Reservation`).
@@ -149,12 +139,6 @@ CREATE TABLE
       ON UPDATE CASCADE 
       ON DELETE CASCADE
   ) ENGINE = InnoDB;
-
-  CREATE INDEX idx_reservationbookid ON Reservation (BookID);
-  
-  CREATE INDEX idx_reservationuserid ON Reservation (UserID);
-  
-  CREATE INDEX idx_reservationdate ON Reservation (ReservationDate);
   ```
 - **Relationships**:
   - A `Reservation` links a `User` to a `Book`. It represents a reserved copy that will be borrowed when available.
@@ -180,12 +164,6 @@ CREATE TABLE
       ON UPDATE CASCADE 
       ON DELETE RESTRICT
   ) ENGINE = InnoDB;
-
-  CREATE INDEX idx_loanbookid ON Loan (BookID);
-  
-  CREATE INDEX idx_loanuserid ON Loan (UserID);
-  
-  CREATE INDEX idx_loandate ON Loan (LoanDate);
   ```
 - **Relationships**:
   - A `Loan` connects a `User` to a `Book`. Each loan represents a book that is currently borrowed.
@@ -217,10 +195,6 @@ CREATE TABLE
       ON UPDATE CASCADE
       ON DELETE RESTRICT
   ) ENGINE = InnoDB;
-
-  CREATE INDEX idx_returnbookid ON History (BookID);
-  
-  CREATE INDEX idx_returnuserid ON History (UserID);
   ```
 - **Relationships**:
   - The `History` entity logs past loans, showing which `User` borrowed which `Book`, and when.
