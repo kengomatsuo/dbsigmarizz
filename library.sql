@@ -101,7 +101,7 @@ CREATE INDEX idx_loandate ON Loan (LoanDate);
 
 CREATE TABLE
   History (
-    BookID CHAR(38) NULL,
+    BookID CHAR(38),
     UserID CHAR(38) NOT NULL,
     LoanDate TIMESTAMP NOT NULL,
     CHECK (LoanDate > '0000-00-00 00-00-00'),
@@ -302,29 +302,20 @@ BEGIN
   IF BookTitle IS NULL OR BookTitle = '' THEN
     ROLLBACK;
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Title must not be null'; 
-  END IF;
 
-  -- IF BookDescription IS NULL OR BookDescription = '' THEN
-  --   ROLLBACK;
-  --   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Description must not be null'; 
-  -- END IF;
-
-  IF BookAuthorID IS NULL OR BookAuthorID = '' THEN
+  ELSEIF BookAuthorID IS NULL OR BookAuthorID = '' THEN
     ROLLBACK;
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'AuthorID must not be null'; 
-  END IF;
 
-  IF NOT (BookISBN REGEXP '^(978|979)-[0-9]{1,5}-[0-9]{1,7}-[0-9]{1,7}-[0-9]$') THEN
+  ELSEIF NOT (BookISBN REGEXP '^(978|979)-[0-9]{1,5}-[0-9]{1,7}-[0-9]{1,7}-[0-9]$') THEN
     ROLLBACK;
     SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Invalid ISBN format'; 
-  END IF;
 
-  IF NOT (BookStock REGEXP '^[0-9]+$') THEN
+  ELSEIF NOT (BookStock REGEXP '^[0-9]+$') THEN
     ROLLBACK;
     SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Invalid Stock format'; 
-  END IF;
 
-  IF BookStock < 1 THEN
+  ELSEIF BookStock < 1 THEN
     ROLLBACK;
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock must not be empty'; 
   END IF;
@@ -427,16 +418,6 @@ BEGIN
       UPDATE Book
         SET Stock = Stock - 1
         WHERE ID = NEW.ID;
-
-      -- DELETE FROM Reservation
-      -- WHERE UserID IN (
-      --   SELECT UserID
-      --   FROM Loan
-      --   WHERE BookID = NEW.ID
-      --   ORDER BY LoanDate DESC
-      --   LIMIT 1
-      -- )
-      -- AND BookID = NEW.ID;
     END IF;
 
   END IF;
