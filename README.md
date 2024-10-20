@@ -3,16 +3,16 @@ This is a repository to store and document the process and results of creating a
 
 [Unnormalized Library Data](unnormalized_library_data(in).csv)
 
-# Setup
+## Setup
 This project uses **XAMPP** as the web server for its easy setup, cross-platform support and easily usable interface to manage the built-in MySQL (MariaDB) database system. XAMPP is ideal for testing web development as it provides an isolated thus safe web application development environment, in case the projec is to be extended into a web application.
 
-# Database Design
+## Database Design
 ![ERD](assets/erd.png)
 This ERD represents the schema for a Library Management System designed to manage books, users, loans, reservations, and author information.
 
-## Entities and Relationships
+### Entities and Relationships
 
-### 1. Author
+#### 1. Author
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each author.
   - `Name`: The name of the author.
@@ -32,7 +32,7 @@ This ERD represents the schema for a Library Management System designed to manag
 - **Relationships**:
   - Each `Author` can write multiple `Books`.
 
-### 2. Book
+#### 2. Book
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each book.
   - `AuthorID` (Foreign Key): Refers to the `ID` of the `Author`.
@@ -65,7 +65,7 @@ This ERD represents the schema for a Library Management System designed to manag
 - **Relationships**:
   - Each `Book` is associated with one `Author` but can have multiple `Loans` and `Reservations`.
 
-### 3. DeletedBook
+#### 3. DeletedBook
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each deleted book.
   - `AuthorID` (Foreign Key): Refers to the `ID` of the `Author`.
@@ -93,7 +93,7 @@ This ERD represents the schema for a Library Management System designed to manag
 - **Relationships**:
   - Each `DeletedBook` acts as a place for deleted `Book`s to preserve their information while not being available for loan.
 
-### 4. User
+#### 4. User
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each user.
   - `Name`: The name of the user.
@@ -119,7 +119,7 @@ CREATE TABLE
 - **Relationships**:
   - Each `User` can borrow multiple `Books` (via `Loan`), and reserve multiple `Books` (via `Reservation`).
 
-### 5. Reservation
+#### 5. Reservation
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
@@ -143,7 +143,7 @@ CREATE TABLE
 - **Relationships**:
   - A `Reservation` links a `User` to a `Book`. It represents a reserved copy that will be borrowed when available.
 
-### 6. Loan
+#### 6. Loan
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
@@ -168,7 +168,7 @@ CREATE TABLE
 - **Relationships**:
   - A `Loan` connects a `User` to a `Book`. Each loan represents a book that is currently borrowed.
 
-### 7. History
+#### 7. History
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
