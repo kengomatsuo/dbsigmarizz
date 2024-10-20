@@ -159,7 +159,10 @@ CREATE PROCEDURE login(
   IN loginPassword VARCHAR(64)
 )
 BEGIN
-
+  SELECT ID 
+  FROM User
+  WHERE loginUsername = Username
+    AND SHA2(loginPassword, 256) = Password
 END $$
 
 CREATE PROCEDURE borrowBook (
