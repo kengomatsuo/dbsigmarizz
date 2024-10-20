@@ -202,7 +202,7 @@ CREATE TABLE
 ## Use Cases
 - Users can **borrow** and **reserve** books.
 - Track which books are currently **borrowed** and which are **available**.
-- **Returning** borrowed books will add to the **history** log.
+- **Returning** borrowed books will add to the **borrowing history**.
 - View **borrowing history** for record-keeping.
 
 
