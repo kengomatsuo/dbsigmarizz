@@ -17,7 +17,7 @@ This is a repository to store and document the process and results of creating a
 The [dataset](data/unnormalized_library_data(in).csv) given is unnormalized, meaning it has a lot of data redundancy. There are several steps to normalize this database.
 
 ### 1. Identify Repeating Data
-It can be seen that the `Title`, `Author_Nmae`, `Author_Birthdate`, `ISBN`, `User_Name`, and `User_Address` are repeating and space-taking. They are then separated into several entities, which are `Book`, `Author`, `User`, and `Loan History`.
+It can be seen that the `Title`, `Author_Nmae`, `Author_Birthdate`, `ISBN`, `User_Name`, and `User_Address` are repeating and space-taking. They are then be separated into several entities, which are `Book`, `Author`, `User`, and `Loan History`.
 
 ### Result
 [Normalized Library Data](data/normalized_library_data.xlsx)
