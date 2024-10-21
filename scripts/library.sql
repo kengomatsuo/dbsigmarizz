@@ -37,9 +37,11 @@ CREATE TABLE
 
 CREATE INDEX idx_booktitle ON Book (Title);
 
-CREATE FULLTEXT INDEX idx_bookdescription ON Book(Description);
+CREATE FULLTEXT INDEX idx_bookdescription ON Book (Description);
 
 CREATE INDEX idx_bookauthorid ON Book (AuthorID);
+
+CREATE INDEX idx_bookisbn ON Book (ISBN);
 
 CREATE TABLE
   DeletedBook (
@@ -56,6 +58,10 @@ CREATE TABLE
       ON UPDATE CASCADE 
       ON DELETE RESTRICT
   ) ENGINE = InnoDB;
+
+CREATE INDEX idx_deletedid ON DeletedBook (ID);
+
+CREATE INDEX idx_deletedisbn ON DeletedBook (ISBN);
 
 CREATE TABLE
   `User` (
@@ -74,6 +80,8 @@ CREATE TABLE
 
 CREATE INDEX idx_userid ON `User` (ID);
 
+CREATE INDEX idx_username ON `User` (Name);
+
 CREATE TABLE
   Reservation (
     BookID CHAR(38) NOT NULL,
@@ -91,6 +99,8 @@ CREATE TABLE
 CREATE INDEX idx_reservationbookid ON Reservation (BookID);
 
 CREATE INDEX idx_reservationuserid ON Reservation (UserID);
+
+CREATE INDEX idx_reservationid ON Reservation (BookID, UserID);
 
 CREATE INDEX idx_reservationdate ON Reservation (ReservationDate);
 
@@ -112,6 +122,8 @@ CREATE TABLE
 CREATE INDEX idx_loanbookid ON Loan (BookID);
 
 CREATE INDEX idx_loanuserid ON Loan (UserID);
+
+CREATE INDEX idx_loanid ON Loan (BookID, UserID);
 
 CREATE INDEX idx_loandate ON Loan (LoanDate);
 
@@ -138,3 +150,5 @@ CREATE TABLE
 CREATE INDEX idx_returnbookid ON History (BookID);
 
 CREATE INDEX idx_returnuserid ON History (UserID);
+
+CREATE INDEX idx_historydate ON History (LoanDate);
