@@ -2,7 +2,16 @@
 This is a repository to store and document the process and results of creating a library database system from an unnormalized dataset file. This project is developed as part of the B26 Database Technology course. It involves designing and implementing a comprehensive database management system (DBMS) for a library. The system covers all core aspects of DBMS, from storage management and memory optimization to transactions, indexing, and security.
 
 ## Resources
-- [Unnormalized Library Data](unnormalized_library_data(in).csv)
+- [Unnormalized Library Data](data/unnormalized_library_data(in).csv)
+
+## Normalization
+The [dataset](data/unnormalized_library_data(in).csv) given is unnormalized, meaning it has a lot of data redundancy. There are several steps to normalize this database.
+
+### 1. Identify Repeating Data
+It can be seen that the `Title`, `Author_Nmae`, `Author_Birthdate`, `ISBN`, `User_Name`, and `User_Address` are repeating and space-taking. They are then separated into several entities, which are `Book`, `Author`, `User`, and `Loan History`.
+
+### Result
+[Normalized Library Data](data/normalized_library_data.xlsx)
 
 ## Setup
 This project uses **XAMPP** as the web server for its easy setup, cross-platform support and easily usable interface to manage the built-in MySQL (MariaDB) database system. XAMPP is ideal for testing web development as it provides an isolated thus safe web application development environment, in case the projec is to be extended into a web application.
