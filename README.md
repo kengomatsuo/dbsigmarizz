@@ -26,7 +26,7 @@ Currently, the `Author` table does not have any ID system and `Book_ID` and `Use
 The normalization process results in a [Normalized Library Data](data/normalized_library_data.xlsx).
 
 ## Setup
-This project uses [**XAMPP**](https://www.apachefriends.org/download.html) as the web server for its easy setup, cross-platform support and easily usable interface to manage the built-in MySQL (MariaDB) database system. XAMPP is ideal for testing web development as it provides an isolated thus safe web application development environment, in case the projec is to be extended into a web application.
+This project uses [XAMPP](https://www.apachefriends.org/index.html) as the web server for its easy setup, cross-platform support and easily usable interface to manage the built-in MySQL (MariaDB) database system. XAMPP is ideal for testing web development as it provides an isolated thus safe web application development environment, in case the projec is to be extended into a web application.
 
 ## Database Design
 ![ERD](assets/erd.png)
@@ -225,6 +225,3 @@ CREATE TABLE
 - Users can **borrow** and **reserve** books.
 - Track which books are currently **borrowed** and which are **available**.
 - View **borrowing history** for record-keeping.
-
-
-
