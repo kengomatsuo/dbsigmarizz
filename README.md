@@ -17,13 +17,16 @@ This is a repository to store and document the process and results of creating a
 The [dataset](data/unnormalized_library_data(in).csv) given is unnormalized, meaning it has a lot of data redundancy. There are several steps to normalize this database.
 
 ### 1. Identify Repeating Data
-It can be seen that the `Title`, `Author_Nmae`, `Author_Birthdate`, `ISBN`, `User_Name`, and `User_Address` are repeating and space-taking. They are then be separated into several entities, which are `Book`, `Author`, `User`, and `Loan History`.
+It can be seen that the `Title`, `Author_Name`, `Author_Birthdate`, `ISBN`, `User_Name`, and `User_Address` are repeating and space-taking. They can then be separated into several entities, which are `Book`, `Author`, `User`, and `Loan History`.
+
+### 2. ID-ing
+Currently, the `Author` table does not have any ID system and `Book_ID` and `User_ID` are indistinguishable from one another. Hence the usage of `UUID` system, which is already by itself universally unique, concatenated with a prefix with each table's alias (eg. "A-c350a9cd-8eed-11ef-834d-08bfb82c14c5" for `Author_ID`). This method is used over `AUTO_INCREMENT` because of its fixed-length string result and untraceability.
 
 ### Result
-[Normalized Library Data](data/normalized_library_data.xlsx)
+The normalization process results in a [Normalized Library Data](data/normalized_library_data.xlsx).
 
 ## Setup
-This project uses **XAMPP** as the web server for its easy setup, cross-platform support and easily usable interface to manage the built-in MySQL (MariaDB) database system. XAMPP is ideal for testing web development as it provides an isolated thus safe web application development environment, in case the projec is to be extended into a web application.
+This project uses [**XAMPP**](https://www.apachefriends.org/download.html) as the web server for its easy setup, cross-platform support and easily usable interface to manage the built-in MySQL (MariaDB) database system. XAMPP is ideal for testing web development as it provides an isolated thus safe web application development environment, in case the projec is to be extended into a web application.
 
 ## Database Design
 ![ERD](assets/erd.png)
@@ -110,7 +113,7 @@ This ERD represents the schema for a Library Management System designed to manag
   ) ENGINE = InnoDB;
   ```
 - **Relationships**:
-  - Each `DeletedBook` acts as a place for deleted `Book`s to preserve their information while not being available for loan.
+  - Each `DeletedBook` acts as a place for deleted `Book` rows to preserve their information while not being available for loan.
 
 #### 4. User
 - **Attributes**:
@@ -221,7 +224,6 @@ CREATE TABLE
 ## Use Cases
 - Users can **borrow** and **reserve** books.
 - Track which books are currently **borrowed** and which are **available**.
-- **Returning** borrowed books will add to the **borrowing history**.
 - View **borrowing history** for record-keeping.
 
 
