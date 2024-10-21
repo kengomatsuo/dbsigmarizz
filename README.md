@@ -5,6 +5,15 @@ This is a repository to store and document the process and results of creating a
 - [Unnormalized Library Data](data/unnormalized_library_data(in).csv)
 
 ## Normalization
+|   Book_ID | Title                       | Author_Name      | Author_Birthdate   | ISBN              |   User_ID | User_Name           | User_Address                                               | Loan_Date   | Return_Date   |
+|----------:|:----------------------------|:-----------------|:-------------------|:------------------|----------:|:--------------------|:-----------------------------------------------------------|:------------|:--------------|
+|      3115 | Particularly charge nearly. | Anita Walker     | 11/1/1962          | 978-1-4223-8315-5 |      8425 | Tracey Kelly        | PSC 6481, Box 1952, APO AA 89825                           | 4/9/2024    | 8/21/2024     |
+|      3270 | Goal ability him.           | Joseph Alvarez   | 1/5/1965           | 978-1-235-83555-1 |      9366 | Brittany Kim DVM    | 80826 Miller Plaza, Shariton, PR 87489                     | 2/14/2024   | 8/5/2024      |
+|      3862 | Board.                      | Kimberly Brown   | 8/3/1970           | 978-0-483-52991-5 |      4425 | Daniel Harrison DDS | 95457 Christopher Manor Suite 485, Port Samantha, MT 79549 | 5/1/2024    | 7/31/2024     |
+|      5157 | Remain begin.               | Christian Mason  | 1/18/1954          | 978-1-924983-22-8 |      8425 | Tracey Kelly        | PSC 6481, Box 1952, APO AA 89825                           | 2/3/2024    | 7/17/2024     |
+|      6607 | Catch form kitchen.         | Calvin Clark     | 2/5/1984           | 978-0-01-444353-6 |      6304 | Erica Davidson      | 51540 Barbara Brook, Andrewmouth, DC 89545                 | 4/15/2024   | 8/31/2024     |
+|      5011 | Dinner ahead but.           | Michael Morrison | 10/25/1988         | 978-1-298-44863-7 |      8425 | Tracey Kelly        | PSC 6481, Box 1952, APO AA 89825                           | 8/23/2024   | 9/8/2024      |
+
 The [dataset](data/unnormalized_library_data(in).csv) given is unnormalized, meaning it has a lot of data redundancy. There are several steps to normalize this database.
 
 ### 1. Identify Repeating Data
