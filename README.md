@@ -329,7 +329,7 @@ xampp/
             └── user.ibd
 ```
 ### Modifying XAMPP MySQL
-To change the default sizes of each table, configure the `my.ini` file located in `...xampp/mysql/bin`. The values can be modified according to need.
+To change the default sizes of each table, configure the `my.ini` file located in `.../xampp/mysql/bin`. The values can be modified according to need.
 ```ini
   [mysqld]
   ...
@@ -355,3 +355,4 @@ To see the changes, restart the `MySQL` module using the `Stop` and `Start` butt
   SHOW VARIABLES LIKE 'innodb_file_per_table' # This should be ON
 ```
 
+## Procedures and Triggers
