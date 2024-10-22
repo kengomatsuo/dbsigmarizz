@@ -83,8 +83,6 @@ This ERD represents the schema for a Library Management System designed to manag
   - `Title`: The title of the book.
   - `Description`: A brief description of the book.
   - `ISBN`: Unique identifier for the book's edition.
-  - `Stock`: The current number of available copies.
-  - `InitialStock`: The original number of copies added to the library.
 - **Script**:
   ```sql
   CREATE TABLE
@@ -98,19 +96,38 @@ This ERD represents the schema for a Library Management System designed to manag
     CHECK (Description != ''),
     ISBN CHAR(17) NOT NULL UNIQUE,
     CHECK (ISBN REGEXP '^(978|979)-[0-9]{1,5}-[0-9]{1,7}-[0-9]{1,7}-[0-9]$'),
-    Stock INTEGER (10) NOT NULL,
-    CHECK (Stock >= 0),
     FOREIGN KEY (AuthorID) REFERENCES Author (ID)
       ON UPDATE CASCADE 
-      ON DELETE RESTRICT,
-    InitialStock INTEGER (10) NOT NULL
+      ON DELETE RESTRICT
   ) ENGINE = InnoDB;
   ```
 - **Relationships**:
   - Each `Book` is associated with one `Author`.
+  - Each `Book` is extended by one `Stock` table.
   - Each `Book` can have multiple `Loans` and `Reservations`.
-
-### 3. DeletedBook
+ 
+### 3. Stock
+- **Attributes**:
+  - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
+  - `Stock`: The current number of available copies.
+  - `InitialStock`: The original number of copies added to the library.
+- **Script**:
+  ```sql
+  CREATE TABLE
+    Stock (
+      BookID CHAR(38) PRIMARY KEY,
+      Stock INTEGER (10) NOT NULL,
+      CHECK (Stock >= 0 AND Stock <= InitialStock),
+      InitialStock INTEGER (10) NOT NULL,
+      FOREIGN KEY (BookID) REFERENCES Book(ID)
+      ON UPDATE CASCADE
+      ON DELETE CASCADE
+    ) ENGINE = InnoDB;
+  ```
+- **Relationships**:
+  - Each `Stock` extends `Book` for a more efficient `Stock` value updating.
+    
+### 4. DeletedBook
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each deleted book.
   - `AuthorID` (Foreign Key): Refers to the `ID` of the `Author`.
@@ -138,7 +155,7 @@ This ERD represents the schema for a Library Management System designed to manag
 - **Relationships**:
   - Each `DeletedBook` acts as a place for deleted `Book` rows to preserve their information while not being available for loan.
 
-### 4. User
+### 5. User
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each user.
   - `Name`: The name of the user.
@@ -165,7 +182,7 @@ CREATE TABLE
   - Each `User` can borrow multiple `Books` (via `Loan`).
   - Each `User` can reserve multiple `Books` (via `Reservation`).
 
-### 5. Reservation
+### 6. Reservation
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
@@ -189,7 +206,7 @@ CREATE TABLE
 - **Relationships**:
   - A `Reservation` links a `User` to a `Book`. It represents a reserved copy that will be borrowed when available.
 
-### 6. Loan
+### 7. Loan
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
@@ -214,7 +231,7 @@ CREATE TABLE
 - **Relationships**:
   - A `Loan` connects a `User` to a `Book`. Each loan represents a book that is currently borrowed.
 
-### 7. History
+### 8. History
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
@@ -262,6 +279,11 @@ For a **faster** and more **efficient** data retrieval when querying, columns wh
   - `idx_bookid`: Allows faster retrieval of book data from a `Reservation` or `Loan`.
   - `idx_bookauthorid`: Useful for when looking up books written by a specific author by `ID`.
   - `idx_bookisbn`: Speeds up searching for books from its `ISBN`, unique identifiers ofen used for searching or verifying book details.
+- **Stock**:
+  ```sql
+  CREATE INDEX idx_stock ON Stock(Stock);
+  ```
+  - `idx_stock`: Allows faster querying of books sorted by availability (whether stock exists).
 - **DeletedBook**
   ```sql
   CREATE INDEX idx_deletedisbn ON DeletedBook (ISBN);
@@ -514,9 +536,14 @@ DELIMITER ;
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock must not be empty'; 
     END IF;
   
-    INSERT INTO Book (AuthorID, Title, Description, ISBN, Stock, InitialStock)
-      VALUES (BookAuthorID, BookTitle, BookDescription, BookISBN, BookStock, BookStock);
-  
+    INSERT INTO Book (AuthorID, Title, Description, ISBN)
+      VALUES (BookAuthorID, BookTitle, BookDescription, BookISBN);
+    INSERT INTO Stock (BookID, Stock, InitialStock)
+      SELECT ID, 
+      BookStock,
+      BookStock
+      FROM Book
+      WHERE Book.ISBN = BookISBN;
     COMMIT;
   END $$ 
   ```
@@ -569,13 +596,13 @@ DELIMITER ;
       SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: Book is currently being borrowed';
     END IF;  
   
-    IF (SELECT Stock FROM Book WHERE ID = LoanBookID) > 0 THEN
+    IF (SELECT Stock FROM Stock WHERE BookID = LoanBookID) > 0 THEN
       INSERT INTO Loan (UserID, BookID)
         VALUES (LoanUserID, LoanBookID);
   
-      UPDATE Book
+      UPDATE Stock
         SET Stock = Stock - 1
-        WHERE ID = LoanBookID;
+        WHERE BookID = LoanBookID;
     ELSE
       INSERT INTO Reservation (UserID, BookID)
         VALUES (LoanUserID, LoanBookID);
@@ -584,4 +611,4 @@ DELIMITER ;
     COMMIT;
   END $$
   ```
-  
+  This procedure checks for empty values, 
