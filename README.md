@@ -30,6 +30,10 @@ The normalization process results in a [Normalized Library Data](data/normalized
 ### Web Server
 This project uses [XAMPP](https://www.apachefriends.org/index.html) as the web server for its easy setup, cross-platform support and easily usable interface to manage the built-in MySQL (MariaDB) database system. XAMPP is ideal for testing web development as it provides an isolated thus safe web application development environment, in case the projec is to be extended into a web application.
 
+To start the MySQL (MariaDB) database service, open the `XAMPP Control Panel` and start both the `Apache` and `MySQL` Module, and click on `Admin` next to `MySQL`.
+
+<img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/xampp.png" width="500px" />
+
 ### Storage Engine
 `XAMPP` provides a range of storage engine to choose:
 
@@ -45,11 +49,6 @@ This project uses [XAMPP](https://www.apachefriends.org/index.html) as the web s
 | PERFORMANCE_SCHEMA |	Performance Schema                                                                              |
 
 From these choices, `InnoDB` should be used for the library data tables, as it provides the most features which are essential for the database.
-
-## Use Cases
-- Users can **borrow** and **reserve** books.
-- Track which books are currently **borrowed** and which are **available**.
-- View **borrowing history** for record-keeping.
 
 ## Entity Relationship Diagram
 ![ERD](assets/erd.png)
@@ -329,8 +328,8 @@ xampp/
             ├── user.frm
             └── user.ibd
 ```
-### Modifying Tablespaces
-To change the default sizes of each table, configure the `my.ini` file located in `...xampp/mysql/bin`.
+### Modifying XAMPP MySQL
+To change the default sizes of each table, configure the `my.ini` file located in `...xampp/mysql/bin`. The values can be modified according to need.
 ```ini
   [mysqld]
   ...
@@ -349,5 +348,10 @@ To change the default sizes of each table, configure the `my.ini` file located i
   innodb_log_buffer_size=16M
   innodb_flush_log_at_trx_commit=1
   innodb_lock_wait_timeout=5
+  ...
 ```
-To see the changes, restart the `MySQL` module using the `XAMPP Control Panel`.
+To see the changes, restart the `MySQL` module using the `Stop` and `Start` button in the `XAMPP Control Panel`, then run queries to check the variables, for example:
+```sql
+  SHOW VARIABLES LIKE 'innodb_file_per_table' # This should be ON
+```
+
