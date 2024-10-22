@@ -30,6 +30,10 @@ The normalization process results in a [Normalized Library Data](data/normalized
 ### Web Server
 This project uses [XAMPP](https://www.apachefriends.org/index.html) as the web server for its easy setup, cross-platform support and easily usable interface to manage the built-in MySQL (MariaDB) database system. XAMPP is ideal for testing web development as it provides an isolated thus safe web application development environment, in case the projec is to be extended into a web application.
 
+To start the MySQL (MariaDB) database service, open the `XAMPP Control Panel` and start both the `Apache` and `MySQL` Module, and click on `Admin` next to `MySQL`.
+
+<img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/xampp.png" width="500px" />
+
 ### Storage Engine
 `XAMPP` provides a range of storage engine to choose:
 
@@ -45,11 +49,6 @@ This project uses [XAMPP](https://www.apachefriends.org/index.html) as the web s
 | PERFORMANCE_SCHEMA |	Performance Schema                                                                              |
 
 From these choices, `InnoDB` should be used for the library data tables, as it provides the most features which are essential for the database.
-
-## Use Cases
-- Users can **borrow** and **reserve** books.
-- Track which books are currently **borrowed** and which are **available**.
-- View **borrowing history** for record-keeping.
 
 ## Entity Relationship Diagram
 ![ERD](assets/erd.png)
@@ -84,8 +83,6 @@ This ERD represents the schema for a Library Management System designed to manag
   - `Title`: The title of the book.
   - `Description`: A brief description of the book.
   - `ISBN`: Unique identifier for the book's edition.
-  - `Stock`: The current number of available copies.
-  - `InitialStock`: The original number of copies added to the library.
 - **Script**:
   ```sql
   CREATE TABLE
@@ -99,19 +96,38 @@ This ERD represents the schema for a Library Management System designed to manag
     CHECK (Description != ''),
     ISBN CHAR(17) NOT NULL UNIQUE,
     CHECK (ISBN REGEXP '^(978|979)-[0-9]{1,5}-[0-9]{1,7}-[0-9]{1,7}-[0-9]$'),
-    Stock INTEGER (10) NOT NULL,
-    CHECK (Stock >= 0),
     FOREIGN KEY (AuthorID) REFERENCES Author (ID)
       ON UPDATE CASCADE 
-      ON DELETE RESTRICT,
-    InitialStock INTEGER (10) NOT NULL
+      ON DELETE RESTRICT
   ) ENGINE = InnoDB;
   ```
 - **Relationships**:
   - Each `Book` is associated with one `Author`.
+  - Each `Book` is extended by one `Stock` table.
   - Each `Book` can have multiple `Loans` and `Reservations`.
-
-### 3. DeletedBook
+ 
+### 3. Stock
+- **Attributes**:
+  - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
+  - `Stock`: The current number of available copies.
+  - `InitialStock`: The original number of copies added to the library.
+- **Script**:
+  ```sql
+  CREATE TABLE
+    Stock (
+      BookID CHAR(38) PRIMARY KEY,
+      Stock INTEGER (10) NOT NULL,
+      CHECK (Stock >= 0 AND Stock <= InitialStock),
+      InitialStock INTEGER (10) NOT NULL,
+      FOREIGN KEY (BookID) REFERENCES Book(ID)
+      ON UPDATE CASCADE
+      ON DELETE CASCADE
+    ) ENGINE = InnoDB;
+  ```
+- **Relationships**:
+  - Each `Stock` extends `Book` for a more efficient `Stock` value updating.
+    
+### 4. DeletedBook
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each deleted book.
   - `AuthorID` (Foreign Key): Refers to the `ID` of the `Author`.
@@ -139,7 +155,7 @@ This ERD represents the schema for a Library Management System designed to manag
 - **Relationships**:
   - Each `DeletedBook` acts as a place for deleted `Book` rows to preserve their information while not being available for loan.
 
-### 4. User
+### 5. User
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each user.
   - `Name`: The name of the user.
@@ -166,7 +182,7 @@ CREATE TABLE
   - Each `User` can borrow multiple `Books` (via `Loan`).
   - Each `User` can reserve multiple `Books` (via `Reservation`).
 
-### 5. Reservation
+### 6. Reservation
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
@@ -190,7 +206,7 @@ CREATE TABLE
 - **Relationships**:
   - A `Reservation` links a `User` to a `Book`. It represents a reserved copy that will be borrowed when available.
 
-### 6. Loan
+### 7. Loan
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
@@ -215,7 +231,7 @@ CREATE TABLE
 - **Relationships**:
   - A `Loan` connects a `User` to a `Book`. Each loan represents a book that is currently borrowed.
 
-### 7. History
+### 8. History
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
@@ -251,55 +267,60 @@ For a **faster** and more **efficient** data retrieval when querying, columns wh
 
 - **Author**:
   ```sql
-    CREATE INDEX idx_authorid ON Author (ID);
+  CREATE INDEX idx_authorid ON Author (ID);
   ```
   - `idx_authorid`: For faster querying of author information by `ID`. (e.g., Displaying author's `Name` and `Birthdate` when opening a book).
 - **Book**:
   ```sql
-    CREATE INDEX idx_bookid ON Book (ID);
-    CREATE INDEX idx_bookauthorid ON Book (AuthorID);
-    CREATE INDEX idx_bookisbn ON Book (ISBN);
+  CREATE INDEX idx_bookid ON Book (ID);
+  CREATE INDEX idx_bookauthorid ON Book (AuthorID);
+  CREATE INDEX idx_bookisbn ON Book (ISBN);
   ```
   - `idx_bookid`: Allows faster retrieval of book data from a `Reservation` or `Loan`.
   - `idx_bookauthorid`: Useful for when looking up books written by a specific author by `ID`.
   - `idx_bookisbn`: Speeds up searching for books from its `ISBN`, unique identifiers ofen used for searching or verifying book details.
+- **Stock**:
+  ```sql
+  CREATE INDEX idx_stock ON Stock(Stock);
+  ```
+  - `idx_stock`: Allows faster querying of books sorted by availability (whether stock exists).
 - **DeletedBook**
   ```sql
-    CREATE INDEX idx_deletedisbn ON DeletedBook (ISBN);
+  CREATE INDEX idx_deletedisbn ON DeletedBook (ISBN);
   ```
   - `idx_deletedisbn`: For faster checking when inserting a new `Book`. If there is a `DeletedBook` with the same `ISBN` of the new `Book`, restore the `DeletedBook` instead. 
 - **User**:
   ```sql
-    CREATE INDEX idx_userid ON `User` (ID);
-    CREATE INDEX idx_username ON `User` (Username);
+  CREATE INDEX idx_userid ON `User` (ID);
+  CREATE INDEX idx_username ON `User` (Username);
   ```
   - `idx_userid`: Similar to `idx_bookid`.
   - `idx_username`: Speeds up searches by `Username`, which is helpful for user authentication and profile lookup.
 - **Reservation**:
   ```sql
-    CREATE INDEX idx_reservationid ON Reservation (BookID, UserID);
-    CREATE INDEX idx_bookreservationbydate ON Reservation (BookID, ReservationDate);
-    CREATE INDEX idx_userreservationbydate ON Reservation (UserID, ReservationDate);
+  CREATE INDEX idx_reservationid ON Reservation (BookID, UserID);
+  CREATE INDEX idx_bookreservationbydate ON Reservation (BookID, ReservationDate);
+  CREATE INDEX idx_userreservationbydate ON Reservation (UserID, ReservationDate);
   ```
   - `idx_reservationid`: A composite index on `BookID` and `UserID` for a more specific searching of reservations where a user has reserved a particular book.
   - `idx_bookreservationdate`: Used to list reservations for a specific `Book`, and could be used to find the oldest `Reservation` created for a specific `Book` for creating `Loan`.
   - `idx_userreservationdate`: Used to list `Reservation`s done by a user sorted by date.
 - **Loan**:
   ```sql
-    CREATE INDEX idx_loanid ON Loan (BookID, UserID);
-    CREATE INDEX idx_bookloanbydate ON Loan (BookID, LoanDate);
-    CREATE INDEX idx_userloanbydate ON Loan (UserID, LoanDate);
+  CREATE INDEX idx_loanid ON Loan (BookID, UserID);
+  CREATE INDEX idx_bookloanbydate ON Loan (BookID, LoanDate);
+  CREATE INDEX idx_userloanbydate ON Loan (UserID, LoanDate);
   ```
   - `idx_loanid`: Similar to `idx_reservationid`.
   - `idx_bookloandate`: Similar to `idx_bookreservationdate`.
   - `idx_userloandate`: Similar to `idx_userreservationdate`.
 - **History**:
   ```sql
-    CREATE INDEX idx_returnbookid ON History (BookID);
-    CREATE INDEX idx_historybydate ON History (LoanDate);
-    CREATE INDEX idx_bookreturnbydate ON History (BookID, LoanDate);
-    CREATE INDEX idx_userreturnbydate ON History (UserID, LoanDate);
-    CREATE INDEX idx_bookidbydate ON History (BookID, UserID, LoanDate);
+  CREATE INDEX idx_returnbookid ON History (BookID);
+  CREATE INDEX idx_historybydate ON History (LoanDate);
+  CREATE INDEX idx_bookreturnbydate ON History (BookID, LoanDate);
+  CREATE INDEX idx_userreturnbydate ON History (UserID, LoanDate);
+  CREATE INDEX idx_bookidbydate ON History (BookID, UserID, LoanDate);
   ```
   - `idx_returnbookid`: For faster querying to update `DeletedBookID` of `History` when a `Book` is deleted.
   - `idx_historybydate`: Used for faster sorting of the `History` of returned `Book`s as a whole.
@@ -329,25 +350,265 @@ xampp/
             ├── user.frm
             └── user.ibd
 ```
-### Modifying Tablespaces
-To change the default sizes of each table, configure the `my.ini` file located in `...xampp/mysql/bin`.
+### Modifying XAMPP MySQL
+To change the default sizes of each table, configure the `my.ini` file located in `.../xampp/mysql/bin`. The values can be modified according to need.
 ```ini
-  [mysqld]
-  ...
-  # Comment the following if you are using InnoDB tables
-  #skip-innodb
-  innodb_file_per_table=1
-  innodb_data_home_dir="F:/xampp/mysql/data"
-  innodb_data_file_path=ibdata1:10M:autoextend
-  innodb_log_group_home_dir="F:/xampp/mysql/data"
-  #innodb_log_arch_dir = "F:/xampp/mysql/data"
-  ## You can set .._buffer_pool_size up to 50 - 80 %
-  ## of RAM but beware of setting memory usage too high
-  innodb_buffer_pool_size=3GB
-  ## Set .._log_file_size to 25 % of buffer pool size
-  innodb_log_file_size=750M
-  innodb_log_buffer_size=16M
-  innodb_flush_log_at_trx_commit=1
-  innodb_lock_wait_timeout=5
+[mysqld]
+...
+# Comment the following if you are using InnoDB tables
+#skip-innodb
+innodb_file_per_table=1
+innodb_data_home_dir="F:/xampp/mysql/data"
+innodb_data_file_path=ibdata1:10M:autoextend
+innodb_log_group_home_dir="F:/xampp/mysql/data"
+#innodb_log_arch_dir = "F:/xampp/mysql/data"
+## You can set .._buffer_pool_size up to 50 - 80 %
+## of RAM but beware of setting memory usage too high
+innodb_buffer_pool_size=3GB
+## Set .._log_file_size to 25 % of buffer pool size
+innodb_log_file_size=750M
+innodb_log_buffer_size=16M
+innodb_flush_log_at_trx_commit=1
+innodb_lock_wait_timeout=5
+...
 ```
-To see the changes, restart the `MySQL` module using the `XAMPP Control Panel`.
+To see the changes, restart the `MySQL` module using the `Stop` and `Start` button in the `XAMPP Control Panel`, then run queries to check the variables, for example:
+```sql
+SHOW VARIABLES LIKE 'innodb_file_per_table' # This should be ON
+SHOW VARIABLES LIKE 'innodb_buffer_pool_size' # This should output 3221225472 (3GB)
+```
+
+## Transactions, Procedures, Functions, Triggers
+A `TRANSACTION` is a series of operations that acts as one. It is essential for queries as it makes sure everything is working well, otherwise it can `ROLLBACK` to revert to the state before the transaction when encountering an error or unwanted results.
+
+Every user-executed feature should use `PROCEDURE` to validate inputs before executing `TRANSACTION`-wrapped SQL queries.
+
+`PROCEDURE`s must be enclosed within a `DELIMITER` keyword followed by any symbol combinations as long as it stands out from the code and is not a reserved keyword. the symbol combination should then be used for every `END` statement at the end of every `PROCEDURE`, `FUNCTION` or `TRIGGER`. For this project, the delimiter **"$$"** is used.
+
+Usage:
+```sql
+DELIMITER $$
+
+CREATE PROCEDURE/FUNCTION/TRIGGER
+...
+BEGIN
+...
+END $$
+
+DELIMITER ;
+```
+
+- **addAuthor()**:
+  ```sql
+  CREATE PROCEDURE addAuthor (
+    IN AuthorName VARCHAR(50),
+    IN AuthorBirthdate DATE
+  ) 
+  BEGIN 
+    START TRANSACTION;
+    IF AuthorName IS NULL OR AuthorName = '' THEN 
+      ROLLBACK;
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Name must not be null'; 
+    ELSEIF AuthorBirthdate < '1900-01-01' OR AuthorBirthdate > CURDATE() THEN 
+      ROLLBACK;
+      SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Invalid birthdate'; 
+
+    ELSEIF EXISTS (
+      SELECT 1
+      FROM Author
+      WHERE Name = AuthorName
+        AND Birthdate = AuthorBirthdate
+    ) THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '15002' SET MESSAGE_TEXT = 'Failed: Author already exists';
+    END IF;
+    INSERT INTO Author (Name, Birthdate)
+      VALUES (CAP_FIRST(AuthorName), AuthorBirthdate);
+    SELECT *
+    FROM Author
+    WHERE Name = AuthorName
+      AND Birthdate = AuthorBirthdate;
+    COMMIT;
+  END $$
+  ```
+  This procedure makes sure every column is not empty and checks if the `Author` already exists using a combination of `Name` and `Birthdate`. it outputs the newly created `Author` row.
+  
+- **addUser()**:
+  ```sql
+  CREATE PROCEDURE addUser (
+    IN UserUsername VARCHAR(100),
+    IN UserFullName VARCHAR(50),
+    IN UserAddress VARCHAR(200),
+    IN UserPassword VARCHAR(32)
+  ) 
+  BEGIN 
+    START TRANSACTION;
+  
+    IF UserUsername IS NULL OR UserUsername = '' THEN 
+      ROLLBACK;
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Username must not be null'; 
+  
+    ELSEIF LOCATE(' ', UserUsername) > 0 THEN 
+      ROLLBACK;
+      SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Username must not have space characters'; 
+  
+    ELSEIF EXISTS (
+      SELECT 1
+      FROM `User`
+      WHERE Username = UserUsername
+    ) THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45002' SET MESSAGE_TEXT = 'Username already exists. Please choose another one';
+  
+    ELSEIF UserFullName IS NULL OR UserFullName = '' THEN 
+      ROLLBACK;
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Name must not be null'; 
+  
+    ELSEIF UserAddress IS NULL OR UserAddress = '' THEN 
+      ROLLBACK;
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Address must not be null'; 
+  
+    ELSEIF (SELECT LENGTH(UserPassword)) < 8 THEN 
+      ROLLBACK;
+      SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Password must be at least 8 characters long'; 
+  
+    ELSEIF LOCATE(' ', UserPassword) > 0 THEN 
+      ROLLBACK;
+      SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Password must not have space characters'; 
+    END IF;
+  
+    INSERT INTO `User` (Username, Name, Address, Password)
+      VALUES (LOWER(UserUsername), CAP_FIRST(UserFullName), UserAddress, SHA2(UserPassword, 256));
+    COMMIT;
+  
+    SELECT *
+    FROM `User` 
+    WHERE Username = UserUsername;
+  END $$
+  ```
+  This procedure checks for any empty fields, validates the correct formatting for each column, makes sure the `Username` field is unique, and validates password. It outputs the newly created `User` row. It then hashes the user password into a 64-character value using `SHA256`.
+
+- **login()**:
+  ```sql
+  CREATE PROCEDURE login(
+    IN loginUsername VARCHAR(100),
+    IN loginPassword VARCHAR(64)
+  )
+  BEGIN
+    SELECT ID 
+    FROM User
+    WHERE loginUsername = Username
+      AND SHA2(loginPassword, 256) = Password
+  END $$
+  ```
+  This procedure will return an `ID` of a `User` if the `Username and hashed `Password` matches any `User` within the database.
+
+- **addBook()**:
+  ```sql
+  CREATE PROCEDURE addBook(
+    IN BookTitle VARCHAR(100),
+    IN BookDescription VARCHAR(2000),
+    IN BookAuthorID CHAR(38),
+    IN BookISBN CHAR(17),
+    IN BookStock INTEGER(10)
+  )
+  BEGIN
+    START TRANSACTION;
+  
+    IF BookTitle IS NULL OR BookTitle = '' THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Title must not be null'; 
+  
+    ELSEIF BookAuthorID IS NULL OR BookAuthorID = '' THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'AuthorID must not be null'; 
+  
+    ELSEIF NOT (BookISBN REGEXP '^(978|979)-[0-9]{1,5}-[0-9]{1,7}-[0-9]{1,7}-[0-9]$') THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Invalid ISBN format'; 
+  
+    ELSEIF NOT (BookStock REGEXP '^[0-9]+$') THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Invalid Stock format'; 
+  
+    ELSEIF BookStock < 1 THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock must not be empty'; 
+    END IF;
+  
+    INSERT INTO Book (AuthorID, Title, Description, ISBN)
+      VALUES (BookAuthorID, BookTitle, BookDescription, BookISBN);
+    INSERT INTO Stock (BookID, Stock, InitialStock)
+      SELECT ID, 
+      BookStock,
+      BookStock
+      FROM Book
+      WHERE Book.ISBN = BookISBN;
+    COMMIT;
+  END $$ 
+  ```
+  Checks for empty values and makes sure ISBN format is valid.
+  
+- **borrowBook()**:
+  ```sql
+  CREATE PROCEDURE borrowBook (
+    IN LoanUserID CHAR(38),
+    IN LoanBookID CHAR(38)
+  )
+  BEGIN
+    START TRANSACTION;
+    IF LoanUserID IS NULL OR LoanUserID = '' THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'UserID must not be null'; 
+    END IF;
+  
+    IF LoanBookID IS NULL OR LoanBookID = '' THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'BookID must not be null'; 
+    END IF;
+  
+    IF NOT EXISTS(
+      SELECT 1
+      FROM Book
+      WHERE ID = LoanBookID
+    ) THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: No matching book found'; 
+    END IF;
+  
+    IF EXISTS (
+      SELECT 1
+      FROM Reservation 
+      WHERE BookID = LoanBookID 
+        AND UserID = LoanUserID 
+      ) THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: Book is already being reserved';
+    END IF;
+  
+    IF EXISTS (
+      SELECT 1
+      FROM Loan 
+      WHERE BookID = LoanBookID 
+        AND UserID = LoanUserID 
+      ) THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: Book is currently being borrowed';
+    END IF;  
+  
+    IF (SELECT Stock FROM Stock WHERE BookID = LoanBookID) > 0 THEN
+      INSERT INTO Loan (UserID, BookID)
+        VALUES (LoanUserID, LoanBookID);
+  
+      UPDATE Stock
+        SET Stock = Stock - 1
+        WHERE BookID = LoanBookID;
+    ELSE
+      INSERT INTO Reservation (UserID, BookID)
+        VALUES (LoanUserID, LoanBookID);
+    END IF;
+    
+    COMMIT;
+  END $$
+  ```
+  This procedure checks for empty values, 
