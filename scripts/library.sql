@@ -35,9 +35,7 @@ CREATE TABLE
     InitialStock INTEGER (10) NOT NULL
   ) ENGINE = InnoDB;
 
-CREATE INDEX idx_booktitle ON Book (Title);
-
-CREATE FULLTEXT INDEX idx_bookdescription ON Book (Description);
+CREATE INDEX idx_bookid ON Book (ID);
 
 CREATE INDEX idx_bookauthorid ON Book (AuthorID);
 
@@ -59,8 +57,6 @@ CREATE TABLE
       ON DELETE RESTRICT
   ) ENGINE = InnoDB;
 
-CREATE INDEX idx_deletedid ON DeletedBook (ID);
-
 CREATE INDEX idx_deletedisbn ON DeletedBook (ISBN);
 
 CREATE TABLE
@@ -80,7 +76,7 @@ CREATE TABLE
 
 CREATE INDEX idx_userid ON `User` (ID);
 
-CREATE INDEX idx_username ON `User` (Name);
+CREATE INDEX idx_username ON `User` (Username);
 
 CREATE TABLE
   Reservation (
@@ -96,13 +92,11 @@ CREATE TABLE
       ON DELETE CASCADE
   ) ENGINE = InnoDB;
 
-CREATE INDEX idx_reservationbookid ON Reservation (BookID);
-
-CREATE INDEX idx_reservationuserid ON Reservation (UserID);
-
 CREATE INDEX idx_reservationid ON Reservation (BookID, UserID);
 
-CREATE INDEX idx_reservationdate ON Reservation (ReservationDate);
+CREATE INDEX idx_bookreservationbydate ON Reservation (BookID, ReservationDate);
+
+CREATE INDEX idx_userreservationbydate ON Reservation (UserID, ReservationDate);
 
 CREATE TABLE
   Loan (
@@ -119,13 +113,11 @@ CREATE TABLE
       ON DELETE RESTRICT
   ) ENGINE = InnoDB;
 
-CREATE INDEX idx_loanbookid ON Loan (BookID);
-
-CREATE INDEX idx_loanuserid ON Loan (UserID);
-
 CREATE INDEX idx_loanid ON Loan (BookID, UserID);
 
-CREATE INDEX idx_loandate ON Loan (LoanDate);
+CREATE INDEX idx_bookloanbydate ON Loan (BookID, LoanDate);
+
+CREATE INDEX idx_userloanbydate ON Loan (UserID, LoanDate);
 
 CREATE TABLE
   History (
@@ -147,8 +139,11 @@ CREATE TABLE
       ON DELETE RESTRICT
   ) ENGINE = InnoDB;
 
-CREATE INDEX idx_returnbookid ON History (BookID);
+CREATE INDEX idx_historybydate ON History (LoanDate);
 
-CREATE INDEX idx_returnuserid ON History (UserID);
+CREATE INDEX idx_bookreturnbydate ON History (BookID, LoanDate);
 
-CREATE INDEX idx_historydate ON History (LoanDate);
+CREATE INDEX idx_userreturnbydate ON History (UserID, LoanDate);
+
+CREATE INDEX idx_returnidbydate ON History (BookID, UserID, LoanDate);
+

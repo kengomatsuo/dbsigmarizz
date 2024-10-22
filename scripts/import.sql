@@ -10,7 +10,7 @@ CREATE TABLE
     UserAddress VARCHAR(200),
     LoanDate VARCHAR(10),
     ReturnDate VARCHAR(10)
-) ENGINE = InnoDB;
+) ENGINE = MEMORY;
 
 LOAD DATA INFILE 'C:/Users/kenne/Downloads/unnormalized_library_data(in).csv'
   INTO TABLE Imported
