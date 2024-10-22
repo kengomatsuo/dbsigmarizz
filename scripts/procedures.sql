@@ -170,8 +170,19 @@ BEGIN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock must not be empty'; 
   END IF;
 
-  INSERT INTO Book (AuthorID, Title, Description, ISBN)
-    VALUES (BookAuthorID, BookTitle, BookDescription, BookISBN);
+  IF EXISTS (
+    SELECT 1
+    FROM DeletedBook
+    WHERE ISBN = BookISBN
+  ) THEN
+    INSERT INTO Book (ID, AuthorID, Title, Description, ISBN)
+    SELECT ID, AuthorID, Title, Description, ISBN
+    FROM DeletedBook
+    WHERE ISBN = BookISBN;
+  ELSE
+    INSERT INTO Book (AuthorID, Title, Description, ISBN)
+      VALUES (BookAuthorID, BookTitle, BookDescription, BookISBN);
+  END IF;
 
   INSERT INTO Stock (BookID, Stock, InitialStock)
     SELECT ID, 
@@ -250,12 +261,12 @@ CREATE TRIGGER onUpdateInitialStock
   ON Stock
   FOR EACH ROW
 BEGIN
+  DECLARE stockDifference INT;
   IF NEW.InitialStock = 0 THEN
     DELETE FROM Book
     WHERE ID = NEW.BookID;
 
   ELSEIF NEW.InitialStock != OLD.InitialStock AND NEW.Stock = OLD.Stock THEN
-    DECLARE stockDifference INT;
     SET stockDifference = NEW.InitialStock - OLD.InitialStock;
     SET NEW.Stock = OLD.Stock + stockDifference;
   END IF;
@@ -266,11 +277,10 @@ CREATE TRIGGER bookUpdateCheck
   ON Stock
   FOR EACH ROW
 BEGIN
+  DECLARE currentStock INT;
   IF NEW.Stock > OLD.Stock THEN
-
-    DECLARE currentStock INT;
     SET currentStock = NEW.Stock;
-    WHILE currentStock > 0 DO
+    loanLoop: WHILE currentStock > 0 DO
       INSERT INTO Loan (UserID, BookID)
       SELECT UserID, BookID
       FROM Reservation
@@ -286,11 +296,11 @@ BEGIN
 
       IF ROW_COUNT() > 0 THEN
         UPDATE Stock
-          SET Stock = Stock - 1
-          WHERE BookID = NEW.BookID;
+        SET Stock = Stock - 1
+        WHERE BookID = NEW.BookID;
         SET currentStock = currentStock - 1;
       ELSE
-        LEAVE;
+        LEAVE loanLoop;
       END IF;
     END WHILE;
   END IF;
@@ -412,6 +422,19 @@ BEGIN
   UPDATE History
     SET DeletedBookID = OLD.ID
     WHERE History.BookID = OLD.ID;
+END $$
+
+CREATE TRIGGER onRestoreBook
+  AFTER INSERT
+  ON Book
+FOR EACH ROW
+BEGIN
+  UPDATE History
+    SET BookID = NEW.ID
+    WHERE History.DeletedBookID = NEW.ID;
+    
+  DELETE FROM DeletedBook
+  WHERE ID = NEW.ID;
 END $$
 
 DELIMITER ;

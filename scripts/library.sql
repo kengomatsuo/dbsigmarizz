@@ -146,7 +146,7 @@ CREATE TABLE
       ON DELETE CASCADE,
     FOREIGN KEY (DeletedBookID) REFERENCES DeletedBook (ID)
       ON UPDATE CASCADE
-      ON DELETE RESTRICT
+      ON DELETE SET NULL
   ) ENGINE = InnoDB;
 
 CREATE INDEX idx_historybydate ON History (LoanDate);
