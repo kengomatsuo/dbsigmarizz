@@ -329,6 +329,7 @@ xampp/
             ├── user.frm
             └── user.ibd
 ```
+### Modifying Tablespaces
 To change the default sizes of each table, configure the `my.ini` file located in `...xampp/mysql/bin`.
 ```ini
   [mysqld]
@@ -349,3 +350,4 @@ To change the default sizes of each table, configure the `my.ini` file located i
   innodb_flush_log_at_trx_commit=1
   innodb_lock_wait_timeout=5
 ```
+To see the changes, restart the `MySQL` module using the `XAMPP Control Panel`.
