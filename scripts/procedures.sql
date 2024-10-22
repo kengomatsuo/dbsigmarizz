@@ -149,6 +149,14 @@ BEGIN
     ROLLBACK;
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'AuthorID must not be null'; 
 
+  ELSEIF NOT EXISTS(
+    SELECT 1
+    FROM Author
+    WHERE ID = BookAuthorID
+  ) THEN
+    ROLLBACK;
+    SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: No matching author found'; 
+
   ELSEIF NOT (BookISBN REGEXP '^(978|979)-[0-9]{1,5}-[0-9]{1,7}-[0-9]{1,7}-[0-9]$') THEN
     ROLLBACK;
     SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Invalid ISBN format'; 
@@ -164,6 +172,7 @@ BEGIN
 
   INSERT INTO Book (AuthorID, Title, Description, ISBN)
     VALUES (BookAuthorID, BookTitle, BookDescription, BookISBN);
+
   INSERT INTO Stock (BookID, Stock, InitialStock)
     SELECT ID, 
     BookStock,
@@ -182,23 +191,28 @@ BEGIN
   IF LoanUserID IS NULL OR LoanUserID = '' THEN
     ROLLBACK;
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'UserID must not be null'; 
-  END IF;
-
-  IF LoanBookID IS NULL OR LoanBookID = '' THEN
+  
+  ELSEIF LoanBookID IS NULL OR LoanBookID = '' THEN
     ROLLBACK;
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'BookID must not be null'; 
-  END IF;
+  
+  ELSEIF NOT EXISTS(
+    SELECT 1
+    FROM User
+    WHERE ID = LoanUserID
+  ) THEN
+    ROLLBACK;
+    SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: No matching user found'; 
 
-  IF NOT EXISTS(
+  ELSEIF NOT EXISTS(
     SELECT 1
     FROM Book
     WHERE ID = LoanBookID
   ) THEN
     ROLLBACK;
     SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: No matching book found'; 
-  END IF;
-
-  IF EXISTS (
+  
+  ELSEIF EXISTS (
     SELECT 1
     FROM Reservation 
     WHERE BookID = LoanBookID 
@@ -206,9 +220,8 @@ BEGIN
     ) THEN
     ROLLBACK;
     SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: Book is already being reserved';
-  END IF;
-
-  IF EXISTS (
+  
+  ELSEIF EXISTS (
     SELECT 1
     FROM Loan 
     WHERE BookID = LoanBookID 
@@ -216,9 +229,8 @@ BEGIN
     ) THEN
     ROLLBACK;
     SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: Book is currently being borrowed';
-  END IF;  
-
-  IF (SELECT Stock FROM Stock WHERE BookID = LoanBookID) > 0 THEN
+  
+  ELSEIF (SELECT Stock FROM Stock WHERE BookID = LoanBookID) > 0 THEN
     INSERT INTO Loan (UserID, BookID)
       VALUES (LoanUserID, LoanBookID);
 
