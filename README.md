@@ -31,7 +31,7 @@ The normalization process results in a [Normalized Library Data](data/normalized
 This project uses [XAMPP](https://www.apachefriends.org/index.html) as the web server for its easy setup, cross-platform support and easily usable interface to manage the built-in MySQL (MariaDB) database system. XAMPP is ideal for testing web development as it provides an isolated thus safe web application development environment, in case the projec is to be extended into a web application.
 
 ### Storage Engine
-XAMPP provides a range of storage engine to choose:
+`XAMPP` provides a range of storage engine to choose:
 
 | Storage Engine     | Description                                                                                      |
 |:-------------------|:-------------------------------------------------------------------------------------------------|
@@ -44,15 +44,20 @@ XAMPP provides a range of storage engine to choose:
 | InnoDB             |	Supports transactions, row-level locking, foreign keys and encryption for tables                |
 | PERFORMANCE_SCHEMA |	Performance Schema                                                                              |
 
-From these choices, InnoDB should be used for the library data tables, as it provides the most features which are essential for the database.
+From these choices, `InnoDB` should be used for the library data tables, as it provides the most features which are essential for the database.
 
-## Database Design
+## Use Cases
+- Users can **borrow** and **reserve** books.
+- Track which books are currently **borrowed** and which are **available**.
+- View **borrowing history** for record-keeping.
+
+## Entity Relationship Diagram
 ![ERD](assets/erd.png)
 This ERD represents the schema for a Library Management System designed to manage books, users, loans, reservations, and author information.
 
-### Entities and Relationships
+## Entities and Relationships
 
-#### 1. Author
+### 1. Author
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each author.
   - `Name`: The name of the author.
@@ -72,7 +77,7 @@ This ERD represents the schema for a Library Management System designed to manag
 - **Relationships**:
   - Each `Author` can write multiple `Books`.
 
-#### 2. Book
+### 2. Book
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each book.
   - `AuthorID` (Foreign Key): Refers to the `ID` of the `Author`.
@@ -106,7 +111,7 @@ This ERD represents the schema for a Library Management System designed to manag
   - Each `Book` is associated with one `Author`.
   - Each `Book` can have multiple `Loans` and `Reservations`.
 
-#### 3. DeletedBook
+### 3. DeletedBook
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each deleted book.
   - `AuthorID` (Foreign Key): Refers to the `ID` of the `Author`.
@@ -134,7 +139,7 @@ This ERD represents the schema for a Library Management System designed to manag
 - **Relationships**:
   - Each `DeletedBook` acts as a place for deleted `Book` rows to preserve their information while not being available for loan.
 
-#### 4. User
+### 4. User
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each user.
   - `Name`: The name of the user.
@@ -161,7 +166,7 @@ CREATE TABLE
   - Each `User` can borrow multiple `Books` (via `Loan`).
   - Each `User` can reserve multiple `Books` (via `Reservation`).
 
-#### 5. Reservation
+### 5. Reservation
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
@@ -185,7 +190,7 @@ CREATE TABLE
 - **Relationships**:
   - A `Reservation` links a `User` to a `Book`. It represents a reserved copy that will be borrowed when available.
 
-#### 6. Loan
+### 6. Loan
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
@@ -210,7 +215,7 @@ CREATE TABLE
 - **Relationships**:
   - A `Loan` connects a `User` to a `Book`. Each loan represents a book that is currently borrowed.
 
-#### 7. History
+### 7. History
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
@@ -301,8 +306,27 @@ For a **faster** and more **efficient** data retrieval when querying, columns wh
   - `idx_bookreturnbydate`: Used for listing the `History` of returned `Loan`s for a specific `Book` sorted by `LoanDate`.
   - `idx_userreturnbydate`: Used for `User`s to view their past `Loan`s sorted by `LoanDate`.
   - `idx_returnidbydate`: Used for specifically recall past `Loan`s of a certain `Book` by a certain `User` sorted by `LoanDate`.
-
-## Use Cases
-- Users can **borrow** and **reserve** books.
-- Track which books are currently **borrowed** and which are **available**.
-- View **borrowing history** for record-keeping.
+ 
+## Storage Management
+By default, `InnoDB` already separates tables into their own respective files.
+```plaintext
+xampp/
+└── mysql/
+    └── data/
+        └── library/
+            ├── author.frm
+            ├── author.ibd
+            ├── book.frm
+            ├── book.ibd
+            ├── deletedbook.frm
+            ├── deletedbook.ibd
+            ├── history.frm
+            ├── history.ibd
+            ├── loan.frm
+            ├── loan.ibd
+            ├── reservation.frm
+            ├── reservation.ibd
+            ├── user.frm
+            └── user.ibd
+```
+To configure the sizes of each table, 
