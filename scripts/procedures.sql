@@ -245,6 +245,22 @@ BEGIN
   COMMIT;
 END $$
 
+CREATE TRIGGER onUpdateInitialStock
+  BEFORE UPDATE
+  ON Stock
+  FOR EACH ROW
+BEGIN
+  IF NEW.InitialStock = 0 THEN
+    DELETE FROM Book
+    WHERE ID = NEW.BookID;
+
+  ELSEIF NEW.InitialStock != OLD.InitialStock AND NEW.Stock = OLD.Stock THEN
+    DECLARE stockDifference INT;
+    SET stockDifference = NEW.InitialStock - OLD.InitialStock;
+    SET NEW.Stock = OLD.Stock + stockDifference;
+  END IF;
+END $$
+
 CREATE TRIGGER bookUpdateCheck
   AFTER UPDATE
   ON Stock
@@ -252,25 +268,31 @@ CREATE TRIGGER bookUpdateCheck
 BEGIN
   IF NEW.Stock > OLD.Stock THEN
 
-    INSERT INTO Loan (UserID, BookID)
-    SELECT UserID, BookID
-    FROM Reservation
-    WHERE Reservation.BookID = NEW.BookID
-      AND NOT EXISTS (
-        SELECT 1
-        FROM Loan
-        WHERE Loan.UserID = Reservation.UserID
-          AND Loan.BookID = Reservation.BookID
-      )
-    ORDER BY Reservation.ReservationDate ASC
-    LIMIT 1;
+    DECLARE currentStock INT;
+    SET currentStock = NEW.Stock;
+    WHILE currentStock > 0 DO
+      INSERT INTO Loan (UserID, BookID)
+      SELECT UserID, BookID
+      FROM Reservation
+      WHERE Reservation.BookID = NEW.BookID
+        AND NOT EXISTS (
+          SELECT 1
+          FROM Loan
+          WHERE Loan.UserID = Reservation.UserID
+            AND Loan.BookID = Reservation.BookID
+        )
+      ORDER BY Reservation.ReservationDate ASC
+      LIMIT 1;
 
-    IF ROW_COUNT() > 0 THEN
-      UPDATE Stock
-        SET Stock = Stock - 1
-        WHERE BookID = NEW.BookID;
-    END IF;
-
+      IF ROW_COUNT() > 0 THEN
+        UPDATE Stock
+          SET Stock = Stock - 1
+          WHERE BookID = NEW.BookID;
+        SET currentStock = currentStock - 1;
+      ELSE
+        LEAVE;
+      END IF;
+    END WHILE;
   END IF;
 END $$
 
@@ -377,22 +399,6 @@ BEGIN
     DELETE FROM `User`
     WHERE ID = DeleteUserID;
   COMMIT;
-END $$
-
-CREATE TRIGGER reservationCleanup
-  AFTER DELETE
-  ON `User`
-  FOR EACH ROW
-BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM Reservation
-    WHERE UserID = OLD.ID
-  ) THEN
-    DELETE FROM Reservation
-    WHERE UserID = OLD.ID;
-  END IF;
-
 END $$
 
 CREATE TRIGGER saveDeletedBook
