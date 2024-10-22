@@ -431,7 +431,7 @@ DELIMITER ;
     COMMIT;
   END $$
   ```
-  This procedure makes sure every column is not empty and checks if the `Author` already exists using a combination of `Name` and `Birthdate`. it outputs the newly created `Author` row.
+  This procedure makes sure every column is not empty and checks if the `Author` already exists using a combination of `Name` and `Birthdate`. It then `INSERT`s the new `Author` and `SELECT`s the newly created `Author` row.
   
 - **addUser()**:
   ```sql
@@ -443,15 +443,12 @@ DELIMITER ;
   ) 
   BEGIN 
     START TRANSACTION;
-  
     IF UserUsername IS NULL OR UserUsername = '' THEN 
       ROLLBACK;
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Username must not be null'; 
-  
     ELSEIF LOCATE(' ', UserUsername) > 0 THEN 
       ROLLBACK;
       SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Username must not have space characters'; 
-  
     ELSEIF EXISTS (
       SELECT 1
       FROM `User`
@@ -459,34 +456,28 @@ DELIMITER ;
     ) THEN
       ROLLBACK;
       SIGNAL SQLSTATE '45002' SET MESSAGE_TEXT = 'Username already exists. Please choose another one';
-  
     ELSEIF UserFullName IS NULL OR UserFullName = '' THEN 
       ROLLBACK;
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Name must not be null'; 
-  
     ELSEIF UserAddress IS NULL OR UserAddress = '' THEN 
       ROLLBACK;
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Address must not be null'; 
-  
     ELSEIF (SELECT LENGTH(UserPassword)) < 8 THEN 
       ROLLBACK;
       SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Password must be at least 8 characters long'; 
-  
     ELSEIF LOCATE(' ', UserPassword) > 0 THEN 
       ROLLBACK;
       SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Password must not have space characters'; 
     END IF;
-  
     INSERT INTO `User` (Username, Name, Address, Password)
       VALUES (LOWER(UserUsername), CAP_FIRST(UserFullName), UserAddress, SHA2(UserPassword, 256));
-    COMMIT;
-  
     SELECT *
     FROM `User` 
     WHERE Username = UserUsername;
+    COMMIT;
   END $$
   ```
-  This procedure checks for any empty fields, validates the correct formatting for each column, makes sure the `Username` field is unique, and validates password. It outputs the newly created `User` row. It then hashes the user password into a 64-character value using `SHA256`.
+  This procedure checks for any empty fields, validates the correct formatting for each column, makes sure the `Username` field is unique, and validates password. It outputs the newly created `User` row. It then hashes the user password into a 64-character value using `SHA256` and `INSERT`s the values into `User`. Lastly, it `SELECT`s the new user.
 
 - **login()**:
   ```sql
@@ -514,28 +505,29 @@ DELIMITER ;
   )
   BEGIN
     START TRANSACTION;
-  
     IF BookTitle IS NULL OR BookTitle = '' THEN
       ROLLBACK;
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Title must not be null'; 
-  
     ELSEIF BookAuthorID IS NULL OR BookAuthorID = '' THEN
       ROLLBACK;
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'AuthorID must not be null'; 
-  
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'AuthorID must not be null';
+    ELSEIF NOT EXISTS(
+      SELECT 1
+      FROM Author
+      WHERE ID = BookAuthorID
+    ) THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: No matching author found'; 
     ELSEIF NOT (BookISBN REGEXP '^(978|979)-[0-9]{1,5}-[0-9]{1,7}-[0-9]{1,7}-[0-9]$') THEN
       ROLLBACK;
       SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Invalid ISBN format'; 
-  
     ELSEIF NOT (BookStock REGEXP '^[0-9]+$') THEN
       ROLLBACK;
       SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Invalid Stock format'; 
-  
     ELSEIF BookStock < 1 THEN
       ROLLBACK;
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock must not be empty'; 
     END IF;
-  
     INSERT INTO Book (AuthorID, Title, Description, ISBN)
       VALUES (BookAuthorID, BookTitle, BookDescription, BookISBN);
     INSERT INTO Stock (BookID, Stock, InitialStock)
@@ -547,7 +539,7 @@ DELIMITER ;
     COMMIT;
   END $$ 
   ```
-  Checks for empty values and makes sure ISBN format is valid.
+  Checks for empty values and makes sure ISBN format is valid, `Author` exists, and `Stock` and `InitialStock` is more than 0 before finally `INSERT`ing into `Book` table.
   
 - **borrowBook()**:
   ```sql
@@ -560,23 +552,24 @@ DELIMITER ;
     IF LoanUserID IS NULL OR LoanUserID = '' THEN
       ROLLBACK;
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'UserID must not be null'; 
-    END IF;
-  
-    IF LoanBookID IS NULL OR LoanBookID = '' THEN
+    ELSEIF LoanBookID IS NULL OR LoanBookID = '' THEN
       ROLLBACK;
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'BookID must not be null'; 
-    END IF;
-  
-    IF NOT EXISTS(
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'BookID must not be null';
+    ELSEIF NOT EXISTS(
+      SELECT 1
+      FROM User
+      WHERE ID = LoanUserID
+    ) THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: No matching user found'; 
+    ELSEIF NOT EXISTS(
       SELECT 1
       FROM Book
       WHERE ID = LoanBookID
     ) THEN
       ROLLBACK;
       SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: No matching book found'; 
-    END IF;
-  
-    IF EXISTS (
+    ELSEIF EXISTS (
       SELECT 1
       FROM Reservation 
       WHERE BookID = LoanBookID 
@@ -584,9 +577,7 @@ DELIMITER ;
       ) THEN
       ROLLBACK;
       SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: Book is already being reserved';
-    END IF;
-  
-    IF EXISTS (
+    ELSEIF EXISTS (
       SELECT 1
       FROM Loan 
       WHERE BookID = LoanBookID 
@@ -594,12 +585,9 @@ DELIMITER ;
       ) THEN
       ROLLBACK;
       SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: Book is currently being borrowed';
-    END IF;  
-  
-    IF (SELECT Stock FROM Stock WHERE BookID = LoanBookID) > 0 THEN
+    ELSEIF (SELECT Stock FROM Stock WHERE BookID = LoanBookID) > 0 THEN
       INSERT INTO Loan (UserID, BookID)
         VALUES (LoanUserID, LoanBookID);
-  
       UPDATE Stock
         SET Stock = Stock - 1
         WHERE BookID = LoanBookID;
@@ -607,8 +595,85 @@ DELIMITER ;
       INSERT INTO Reservation (UserID, BookID)
         VALUES (LoanUserID, LoanBookID);
     END IF;
-    
     COMMIT;
   END $$
   ```
-  This procedure checks for empty values, 
+  This procedure checks for empty values, checks if `Book` or `User` exist, then checks for available stock in the `Stock` table using the `BookID`. If `Stock` is more than 0, `INSERT` into `Loan` table, otherwise `INSERT` into `Reservation` table as a queue.
+
+- **returnBook()**
+  ```sql
+  CREATE PROCEDURE returnBook(
+    IN ReturnBookID CHAR(38),
+    IN ReturnUserID CHAR(38)
+  )
+  BEGIN
+    START TRANSACTION;
+    IF ReturnUserID IS NULL OR ReturnUserID = '' THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'UserID must not be null'; 
+    END IF;
+    IF ReturnBookID IS NULL OR ReturnBookID = '' THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'BookID must not be null'; 
+    END IF;
+    IF NOT EXISTS(
+      SELECT 1
+      FROM Book
+      WHERE ID = ReturnBookID
+    ) THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: No matching book found'; 
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1
+      FROM Loan 
+      WHERE BookID = ReturnBookID 
+        AND UserID = ReturnUserID 
+      ) THEN
+      ROLLBACK;
+      SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: Book is not currently being borrowed';
+    END IF;
+    DELETE FROM Loan
+    WHERE UserID = ReturnUserID
+      AND BookID = ReturnBookID;
+    UPDATE Stock
+      SET Stock = Stock + 1
+      WHERE BookID = ReturnBookID;
+    COMMIT;
+  END $$
+  ```
+  Validates fields, checks if `Book` and `User` exists, then deletes the `Loan` row.
+
+- **deleteUser()**
+  ```sql
+  CREATE PROCEDURE deleteUser(
+    IN DeleteUserID CHAR(38)
+  )
+  BEGIN
+    START TRANSACTION;
+      IF DeleteUserID IS NULL OR DeleteUserID = '' THEN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'UserID must not be null'; 
+      END IF;
+      IF EXISTS (
+        SELECT 1
+        FROM Loan
+        WHERE UserID = DeleteUserID
+      ) THEN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: Outstanding loans found. Return current book loans before deleting account';
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1
+        FROM `User`
+        WHERE ID = DeleteUserID
+      ) THEN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: No matching user found';
+      END IF;
+      DELETE FROM `User`
+      WHERE ID = DeleteUserID;
+    COMMIT;
+  END $$
+  ```
+  Validates input, checks if there are existing `Loan`s, if not then deletes `User`.
