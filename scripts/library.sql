@@ -27,12 +27,9 @@ CREATE TABLE
     CHECK (Description != ''),
     ISBN CHAR(17) NOT NULL UNIQUE,
     CHECK (ISBN REGEXP '^(978|979)-[0-9]{1,5}-[0-9]{1,7}-[0-9]{1,7}-[0-9]$'),
-    Stock INTEGER (10) NOT NULL,
-    CHECK (Stock >= 0),
     FOREIGN KEY (AuthorID) REFERENCES Author (ID)
       ON UPDATE CASCADE 
-      ON DELETE RESTRICT,
-    InitialStock INTEGER (10) NOT NULL
+      ON DELETE RESTRICT
   ) ENGINE = InnoDB;
 
 CREATE INDEX idx_bookid ON Book (ID);
@@ -40,6 +37,19 @@ CREATE INDEX idx_bookid ON Book (ID);
 CREATE INDEX idx_bookauthorid ON Book (AuthorID);
 
 CREATE INDEX idx_bookisbn ON Book (ISBN);
+
+CREATE TABLE
+  Stock (
+    BookID CHAR(38) PRIMARY KEY,
+    Stock INTEGER (10) NOT NULL,
+    CHECK (Stock >= 0 AND Stock <= InitialStock),
+    InitialStock INTEGER (10) NOT NULL,
+    FOREIGN KEY (BookID) REFERENCES Book(ID)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+  ) ENGINE = InnoDB;
+
+CREATE INDEX idx_stock ON Stock (Stock);
 
 CREATE TABLE
   DeletedBook (

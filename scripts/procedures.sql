@@ -113,9 +113,23 @@ BEGIN
 
   INSERT INTO `User` (Username, Name, Address, Password)
     VALUES (LOWER(UserUsername), CAP_FIRST(UserFullName), UserAddress, SHA2(UserPassword, 256));
+
+  SELECT *
+  FROM `User` 
+  WHERE Username = UserUsername;
   COMMIT;
 END $$
 
+CREATE PROCEDURE login(
+  IN loginUsername VARCHAR(100),
+  IN loginPassword VARCHAR(64)
+)
+BEGIN
+  SELECT ID 
+  FROM User
+  WHERE loginUsername = Username
+    AND SHA2(loginPassword, 256) = Password;
+END $$
 
 CREATE PROCEDURE addBook(
   IN BookTitle VARCHAR(100),
@@ -148,22 +162,16 @@ BEGIN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock must not be empty'; 
   END IF;
 
-  INSERT INTO Book (AuthorID, Title, Description, ISBN, Stock, InitialStock)
-    VALUES (BookAuthorID, BookTitle, BookDescription, BookISBN, BookStock, BookStock);
-
+  INSERT INTO Book (AuthorID, Title, Description, ISBN)
+    VALUES (BookAuthorID, BookTitle, BookDescription, BookISBN);
+  INSERT INTO Stock (BookID, Stock, InitialStock)
+    SELECT ID, 
+    BookStock,
+    BookStock
+    FROM Book
+    WHERE Book.ISBN = BookISBN;
   COMMIT;
 END $$ 
-
-CREATE PROCEDURE login(
-  IN loginUsername VARCHAR(100),
-  IN loginPassword VARCHAR(64)
-)
-BEGIN
-  SELECT ID 
-  FROM User
-  WHERE loginUsername = Username
-    AND SHA2(loginPassword, 256) = Password
-END $$
 
 CREATE PROCEDURE borrowBook (
   IN LoanUserID CHAR(38),
@@ -210,13 +218,13 @@ BEGIN
     SIGNAL SQLSTATE '45102' SET MESSAGE_TEXT = 'Failed: Book is currently being borrowed';
   END IF;  
 
-  IF (SELECT Stock FROM Book WHERE ID = LoanBookID) > 0 THEN
+  IF (SELECT Stock FROM Stock WHERE BookID = LoanBookID) > 0 THEN
     INSERT INTO Loan (UserID, BookID)
       VALUES (LoanUserID, LoanBookID);
 
-    UPDATE Book
+    UPDATE Stock
       SET Stock = Stock - 1
-      WHERE ID = LoanBookID;
+      WHERE BookID = LoanBookID;
   ELSE
     INSERT INTO Reservation (UserID, BookID)
       VALUES (LoanUserID, LoanBookID);
@@ -227,7 +235,7 @@ END $$
 
 CREATE TRIGGER bookUpdateCheck
   AFTER UPDATE
-  ON Book
+  ON Stock
   FOR EACH ROW
 BEGIN
   IF NEW.Stock > OLD.Stock THEN
@@ -235,7 +243,7 @@ BEGIN
     INSERT INTO Loan (UserID, BookID)
     SELECT UserID, BookID
     FROM Reservation
-    WHERE Reservation.BookID = NEW.ID
+    WHERE Reservation.BookID = NEW.BookID
       AND NOT EXISTS (
         SELECT 1
         FROM Loan
@@ -246,9 +254,9 @@ BEGIN
     LIMIT 1;
 
     IF ROW_COUNT() > 0 THEN
-      UPDATE Book
+      UPDATE Stock
         SET Stock = Stock - 1
-        WHERE ID = NEW.ID;
+        WHERE BookID = NEW.BookID;
     END IF;
 
   END IF;
@@ -310,9 +318,9 @@ BEGIN
   WHERE UserID = ReturnUserID
     AND BookID = ReturnBookID;
 
-  UPDATE Book
+  UPDATE Stock
     SET Stock = Stock + 1
-    WHERE ID = ReturnBookID;
+    WHERE BookID = ReturnBookID;
 
   COMMIT;
 END $$

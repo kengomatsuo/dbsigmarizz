@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS Imported;
+
 CREATE TABLE
   Imported (
     OldBookID CHAR(4),
@@ -23,19 +25,23 @@ SELECT DISTINCT AuthorName, STR_TO_DATE(AuthorBirthdate, '%c/%e/%Y')
 FROM Imported
 ON DUPLICATE KEY UPDATE Name=Name;
 
-INSERT INTO Book (AuthorID, Title, ISBN, Stock, InitialStock)
+INSERT INTO Book (AuthorID, Title, ISBN)
 SELECT DISTINCT
   Author.ID,
   Imported.BookTitle,
-  Imported.ISBN,
-  @random_number := FLOOR(1+(RAND() * 15)),
-  @random_number 
+  Imported.ISBN
 FROM Imported
 LEFT JOIN Author
   ON Author.Name = Imported.AuthorName
   AND Author.Birthdate = STR_TO_DATE(Imported.AuthorBirthdate, '%c/%e/%Y') 
 WHERE Author.ID IS NOT NULL
 ON DUPLICATE KEY UPDATE Title=Title;
+
+INSERT INTO Stock (BookID, Stock, InitialStock)
+SELECT ID, 
+  @random_number := FLOOR(1+(RAND() * 15)),
+  @random_number 
+FROM Book;
 
 INSERT INTO `User` (Username, Name, Address, Password)
 SELECT DISTINCT 
