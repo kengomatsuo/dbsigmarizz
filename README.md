@@ -378,7 +378,7 @@ SHOW VARIABLES LIKE 'innodb_file_per_table' # This should be ON
 SHOW VARIABLES LIKE 'innodb_buffer_pool_size' # This should output 3221225472 (3GB)
 ```
 
-## Transactions, Procedures, Functions, Triggers
+## Transactions and Procedures
 A `TRANSACTION` is a series of operations that acts as one. It is essential for queries as it makes sure everything is working well, otherwise it can `ROLLBACK` to revert to the state before the transaction when encountering an error or unwanted results.
 
 Every user-executed feature should use `PROCEDURE` to validate inputs before executing `TRANSACTION`-wrapped SQL queries.
@@ -412,7 +412,6 @@ DELIMITER ;
     ELSEIF AuthorBirthdate < '1900-01-01' OR AuthorBirthdate > CURDATE() THEN 
       ROLLBACK;
       SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Invalid birthdate'; 
-
     ELSEIF EXISTS (
       SELECT 1
       FROM Author
@@ -528,8 +527,19 @@ DELIMITER ;
       ROLLBACK;
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock must not be empty'; 
     END IF;
-    INSERT INTO Book (AuthorID, Title, Description, ISBN)
-      VALUES (BookAuthorID, BookTitle, BookDescription, BookISBN);
+    IF EXISTS (
+      SELECT 1
+      FROM DeletedBook
+      WHERE ISBN = BookISBN
+    ) THEN
+      INSERT INTO Book (ID, AuthorID, Title, Description, ISBN)
+      SELECT ID, AuthorID, Title, Description, ISBN
+      FROM DeletedBook
+      WHERE ISBN = BookISBN;
+    ELSE
+      INSERT INTO Book (AuthorID, Title, Description, ISBN)
+        VALUES (BookAuthorID, BookTitle, BookDescription, BookISBN);
+    END IF;
     INSERT INTO Stock (BookID, Stock, InitialStock)
       SELECT ID, 
       BookStock,
@@ -539,7 +549,7 @@ DELIMITER ;
     COMMIT;
   END $$ 
   ```
-  Checks for empty values and makes sure ISBN format is valid, `Author` exists, and `Stock` and `InitialStock` is more than 0 before finally `INSERT`ing into `Book` table.
+  Checks for empty values and makes sure ISBN format is valid, `Author` exists, and `Stock` and `InitialStock` is more than 0 before finally `INSERT`ing into `Book` table. If the book with matching ISBN is found in the `DeletedBook` table, the `DeletedBook` will then be restored instead, maintaining its old values instead of the newly inserted one.
   
 - **borrowBook()**:
   ```sql
@@ -600,7 +610,7 @@ DELIMITER ;
   ```
   This procedure checks for empty values, checks if `Book` or `User` exist, then checks for available stock in the `Stock` table using the `BookID`. If `Stock` is more than 0, `INSERT` into `Loan` table, otherwise `INSERT` into `Reservation` table as a queue.
 
-- **returnBook()**
+- **returnBook()**:
   ```sql
   CREATE PROCEDURE returnBook(
     IN ReturnBookID CHAR(38),
@@ -644,7 +654,7 @@ DELIMITER ;
   ```
   Validates fields, checks if `Book` and `User` exists, then deletes the `Loan` row.
 
-- **deleteUser()**
+- **deleteUser()**:
   ```sql
   CREATE PROCEDURE deleteUser(
     IN DeleteUserID CHAR(38)
@@ -676,4 +686,128 @@ DELIMITER ;
     COMMIT;
   END $$
   ```
-  Validates input, checks if there are existing `Loan`s, if not then deletes `User`.
+  Validates input, checks if there are existing outstanding `Loan`s associated with the `User`, if not then deletes `User`.
+
+## Triggers
+`TRIGGER`s are helpful for automating actions depending on another. These can also be used to further simplify the querying process.
+- **onUpdateInitialStock**:
+  ```sql
+  CREATE TRIGGER onUpdateInitialStock
+    BEFORE UPDATE
+    ON Stock
+    FOR EACH ROW
+  BEGIN
+    DECLARE stockDifference INT;
+    IF NEW.InitialStock = 0 THEN
+      DELETE FROM Book
+      WHERE ID = NEW.BookID;
+    ELSEIF NEW.InitialStock != OLD.InitialStock AND NEW.Stock = OLD.Stock THEN
+      SET stockDifference = NEW.InitialStock - OLD.InitialStock;
+      SET NEW.Stock = OLD.Stock + stockDifference;
+    END IF;
+  END $$
+  ```
+  When a librarian or admin modifies the InitialStock of a `Book` in `Stock` table, the current `Stock` value should update accordingly. If it violates any of the constraints, it should `ROLLBACK` the `UPDATE`. If the librarian or admin `UPDATE`s it to 0, then it deletes the `Book` itself.
+  
+- **bookUpdateCheck**:
+  ```sql
+  CREATE TRIGGER bookUpdateCheck
+    AFTER UPDATE
+    ON Stock
+    FOR EACH ROW
+  BEGIN
+    DECLARE currentStock INT;
+    IF NEW.Stock > OLD.Stock THEN
+      SET currentStock = NEW.Stock;
+      loanLoop: WHILE currentStock > 0 DO
+        INSERT INTO Loan (UserID, BookID)
+        SELECT UserID, BookID
+        FROM Reservation
+        WHERE Reservation.BookID = NEW.BookID
+          AND NOT EXISTS (
+            SELECT 1
+            FROM Loan
+            WHERE Loan.UserID = Reservation.UserID
+              AND Loan.BookID = Reservation.BookID
+          )
+        ORDER BY Reservation.ReservationDate ASC
+        LIMIT 1;
+        IF ROW_COUNT() > 0 THEN
+          UPDATE Stock
+          SET Stock = Stock - 1
+          WHERE BookID = NEW.BookID;
+          SET currentStock = currentStock - 1;
+        ELSE
+          LEAVE loanLoop;
+        END IF;
+      END WHILE;
+    END IF;
+  END $$
+  ```
+  Every time a `Stock` table is updated and the `Stock` is incremented (when someone returns a book or a librarian adds to the `InitialStock`), the system should check for the oldest `Reservation` for the specific `Book` using the `BookID` of `Stock`. If any is found, create a `Loan` using the same values and re-update the `Stock` by decrementing.
+
+- **onLoanCreation**:
+  ```sql
+  CREATE TRIGGER onLoanCreation
+    AFTER INSERT
+    ON Loan
+    FOR EACH ROW
+  BEGIN
+    IF EXISTS (
+      SELECT 1
+      FROM Reservation
+      WHERE BookID = NEW.BookID
+        AND UserID = NEW.UserID
+    ) THEN
+      DELETE FROM Reservation
+      WHERE BookID = NEW.BookID
+        AND UserID = NEW.UserID;
+    END IF;
+  END $$
+  ```
+  When a `Loan` is created, the system should check if there is a reservation with the same `UserID` and `BookID`, and delete it if exists.
+
+- **saveLoanToHistory**
+  ```sql
+  CREATE TRIGGER saveLoanToHistory
+    AFTER DELETE
+    ON Loan
+    FOR EACH ROW
+  BEGIN
+    INSERT INTO History (UserID, BookID, LoanDate)
+      VALUES (OLD.UserID, OLD.BookID, OLD.LoanDate);
+  END $$
+  ```
+  This is a rather short script which automatically saves the `LoanDate` to `History` table when a `Book` is returned which would delete the `Loan` row respectively. It also records the time `History` is created using default value.
+
+- **saveDeletedBook**
+  ```sql
+  CREATE TRIGGER saveDeletedBook
+    BEFORE DELETE
+    ON Book
+  FOR EACH ROW
+  BEGIN
+    INSERT INTO DeletedBook (ID, AuthorID, Title, Description, ISBN)
+    VALUES (OLD.ID, OLD.AuthorID, OLD.Title, OLD.Description, OLD.ISBN);
+    UPDATE History
+      SET DeletedBookID = OLD.ID
+      WHERE History.BookID = OLD.ID;
+  END $$
+  ```
+  When a book is deleted, `User`s should still be able to access the `Book` details from the history, but unable to borrow it anymore. This trigger moves the `Book` information into a `DeletedBook` table. It also updates the value of `DeletedBookID` of the `History` row to connect with the `DeletedBook`.
+
+- **onRestoreBook**
+  ```sql
+  CREATE TRIGGER onRestoreBook
+    AFTER INSERT
+    ON Book
+  FOR EACH ROW
+  BEGIN
+    UPDATE History
+      SET BookID = NEW.ID
+      WHERE History.DeletedBookID = NEW.ID;
+    DELETE FROM DeletedBook
+    WHERE ID = NEW.ID;
+  END $$
+  ```
+  When a `Book` is restored from `DeletedBook`, remove the `DeletedBook` row and `UPDATE` the `History` row to connect it with `Book` using `BookID`.
