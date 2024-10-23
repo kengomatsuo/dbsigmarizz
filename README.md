@@ -168,8 +168,6 @@ CREATE TABLE
     ID CHAR(38) PRIMARY KEY DEFAULT CONCAT ('U-', UUID ()),
     Username VARCHAR(100) NOT NULL UNIQUE,
     CHECK (Username != ''),
-    Role VARCHAR(10) NOT NULL DEFAULT 'reader',
-    CHECK (Role = 'reader' OR Role = 'librarian' OR Role = 'admin'),
     Name VARCHAR(50) NOT NULL,
     CHECK (Name != ''),
     Address VARCHAR(200) NOT NULL,
@@ -235,6 +233,7 @@ CREATE TABLE
 - **Attributes**:
   - `BookID` (Foreign Key): Refers to the `ID` of the `Book`.
   - `UserID` (Foreign Key): Refers to the `ID` of the `User`.
+  - `DeletedBookID` (Foreign Key): Refers to the `ID` of the `DeletedBook`.
   - `LoanDate`: The date when the book was borrowed.
   - `ReturnDate`: The date when the book was returned.
 - **Script**:
@@ -256,7 +255,7 @@ CREATE TABLE
       ON DELETE CASCADE,
     FOREIGN KEY (DeletedBookID) REFERENCES DeletedBook (ID)
       ON UPDATE CASCADE
-      ON DELETE RESTRICT
+      ON DELETE SET NULL
   ) ENGINE = InnoDB;
   ```
 - **Relationships**:
@@ -811,3 +810,5 @@ DELIMITER ;
   END $$
   ```
   When a `Book` is restored from `DeletedBook`, remove the `DeletedBook` row and `UPDATE` the `History` row to connect it with `Book` using `BookID`.
+
+## 
