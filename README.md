@@ -59,7 +59,7 @@ This ERD represents the schema for a Library Management System designed to manag
 ### 1. Author
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each author.
-  - `Name`: The name of the author.
+  - `Name`: The name of the author. Added `FULLTEXT` support for faster searching.
   - `Birthdate`: The date of birth of the author.
 - **Script**:
   ```sql
@@ -70,7 +70,8 @@ This ERD represents the schema for a Library Management System designed to manag
     CHECK (Name != ''),
     Birthdate DATE NOT NULL,
     CHECK (Birthdate > '0000-00-00'),
-    UNIQUE (Name, Birthdate)
+    UNIQUE (Name, Birthdate),
+    FULLTEXT (Name)
   ) ENGINE = InnoDB;
   ```
 - **Relationships**:
@@ -80,8 +81,8 @@ This ERD represents the schema for a Library Management System designed to manag
 - **Attributes**:
   - `ID` (Primary Key): Unique identifier for each book.
   - `AuthorID` (Foreign Key): Refers to the `ID` of the `Author`.
-  - `Title`: The title of the book.
-  - `Description`: A brief description of the book.
+  - `Title`: The title of the book. Added `FULLTEXT` support for faster searching.
+  - `Description`: A brief description of the book. Added `FULLTEXT` support for faster searching.
   - `ISBN`: Unique identifier for the book's edition.
 - **Script**:
   ```sql
@@ -98,7 +99,8 @@ This ERD represents the schema for a Library Management System designed to manag
     CHECK (ISBN REGEXP '^(978|979)-[0-9]{1,5}-[0-9]{1,7}-[0-9]{1,7}-[0-9]$'),
     FOREIGN KEY (AuthorID) REFERENCES Author (ID)
       ON UPDATE CASCADE 
-      ON DELETE RESTRICT
+      ON DELETE RESTRICT,
+  FULLTEXT (Title, Description)
   ) ENGINE = InnoDB;
   ```
 - **Relationships**:
@@ -686,6 +688,33 @@ DELIMITER ;
   END $$
   ```
   Validates input, checks if there are existing outstanding `Loan`s associated with the `User`, if not then deletes `User`.
+
+- **searchBook()**:
+  ```sql
+  CREATE PROCEDURE searchBook(
+    IN BookQuery VARCHAR(100)
+  )
+  BEGIN
+    SELECT Title, Name, Description
+      FROM Book 
+      JOIN Author
+      ON Book.AuthorID = Author.ID
+      WHERE MATCH (Title, Description) AGAINST (BookQuery IN BOOLEAN MODE)
+        OR MATCH (Name) AGAINST (BookQuery IN BOOLEAN MODE)
+        OR Title LIKE CONCAT(BookQuery, '%')
+        OR Name LIKE CONCAT(BookQuery, '%')
+      ORDER BY (CASE 
+        WHEN Title LIKE CONCAT(BookQuery, '%') THEN 4
+        WHEN Name LIKE CONCAT(BookQuery, '%') THEN 3
+        WHEN MATCH (Title, Description) AGAINST (BookQuery IN BOOLEAN MODE) THEN 2
+        WHEN MATCH (Name) AGAINST (BookQuery IN BOOLEAN MODE) THEN 1
+        ELSE 0
+      END) DESC,
+      (MATCH (Title, Description) AGAINST (BookQuery IN BOOLEAN MODE) +
+       MATCH (Name) AGAINST (BookQuery IN BOOLEAN MODE)) DESC;
+  END $$
+  ```
+  Searches for similar books by `Book`'s `Title`, `Description`, or `Author`'s `Name` using `MATCH` on the previously added `FULLTEXT` support columns. The sorting prioritizes `Title` prefix and `Name` prefix, before then `MATCH`ing with `Title` and `Description`, then lastly `MATCH`ing with the `Author`'s `Name`. If the weights are the same, a secondary sorting uses the `MATCH` scores added together.
 
 ## Triggers
 `TRIGGER`s are helpful for automating actions depending on another. These can also be used to further simplify the querying process.
