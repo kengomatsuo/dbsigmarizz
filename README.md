@@ -359,10 +359,10 @@ To change the default sizes of each table, configure the `my.ini` file located i
 # Comment the following if you are using InnoDB tables
 #skip-innodb
 innodb_file_per_table=1
-innodb_data_home_dir="F:/xampp/mysql/data"
+innodb_data_home_dir=".../xampp/mysql/data"
 innodb_data_file_path=ibdata1:10M:autoextend
-innodb_log_group_home_dir="F:/xampp/mysql/data"
-#innodb_log_arch_dir = "F:/xampp/mysql/data"
+innodb_log_group_home_dir=".../xampp/mysql/data"
+#innodb_log_arch_dir = ".../xampp/mysql/data"
 ## You can set .._buffer_pool_size up to 50 - 80 %
 ## of RAM but beware of setting memory usage too high
 innodb_buffer_pool_size=3GB
@@ -840,9 +840,31 @@ DELIMITER ;
   ```
   When a `Book` is restored from `DeletedBook`, remove the `DeletedBook` row and `UPDATE` the `History` row to connect it with `Book` using `BookID`.
 
+## Roles and Permissions
+`ROLE`s are essential for easy permission management within the database. `ROLE`s should be defined based on job functions, in this case: `admin`, `librarian`, and `reader`. Each `ROLE` can then be granted select privileges to `INSERT`, `UDPATE`, and/or `DELETE` from specific tables. This is a query that defines each `ROLE` and grants them the appropriate permissions.
+
+```sql
+CREATE ROLE 'admin';
+CREATE ROLE 'librarian';
+CREATE ROLE 'reader';
+
+GRANT ALL PRIVILEGES ON library.* TO 'admin';
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON library.Author TO 'librarian';
+GRANT SELECT, INSERT, UPDATE, DELETE ON library.Book TO 'librarian';
+GRANT SELECT, DELETE ON library.Loan TO 'librarian';
+GRANT SELECT ON library.History TO 'librarian';
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON library.User TO 'reader';
+GRANT SELECT, INSERT, DELETE ON library.Reservation TO 'reader';
+GRANT SELECT, INSERT ON library.Loan TO 'reader';
+GRANT SELECT ON library.History TO 'reader';
+```
+
 ## Setting Up SSL Security Protocol
 SSL (Secure Sockets Layer) encrypts and secures internet communication. By defult, the `Apache` server does not enable SSL. There are several steps to set up and configure SSL for an `XAMPP` `Apache` server.
-- ### 1. Virtual Host
+
+### 1. Virtual Host
   Open `httpd-vhosts.conf` located in `.../xampp/apache/conf/extra` and add the following lines at the end of the file:
   ```conf
   <VirtualHost *:80>
@@ -861,19 +883,19 @@ SSL (Secure Sockets Layer) encrypts and secures internet communication. By deful
   </VirtualHost>
   ```
   
-- ### 2. Making a Certificate
+### 2. Making a Certificate
   `XAMPP` provides a way to create an SSL certificate. Run `makecert.bat` located in `.../xampp/apache` and fill in the terminal as needed.
   
   ![makecert.bat](assets/makecert.png)
   After the setup, the files `ssl.cst/server.cst` and `ssl.key/server.key` should be created in `.../xampp/apache/conf`. These are the files needed for `apache` to validate the security protocol.
   
-- ### 3. Include Virtual Host
+### 3. Include Virtual Host
   Open `httpd.conf` located in `.../xampp/apache/conf` and add the following line to the end of the file:
   ```conf
   Include conf/extra/httpd-vhosts.conf
   ```
 
-- ### 4. Install Certificate
+### 4. Install Certificate
   The `server.crt` has been created but not installed yet. To install, simply open the `server.crt` file inside `.../xampp/apache/conf`. This will bring about a certificate window
 
   <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/cert1.png" width="400px" />
@@ -886,8 +908,31 @@ SSL (Secure Sockets Layer) encrypts and secures internet communication. By deful
   
 Upon completion of the setup, accessing the `localhost` site without the `https://` prefx will show an error as such:
 
-<img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/cert5.png" width="400px" />
+![Certificate Setup 5](assets/cert5.png)
 
 This concludes the SSL encryption setup.
 
 ## Backup and Restore
+To be ready for disasters and unexpected circumstances, regular backups are needed. `mysqldump` is a command-line tool that comes with `MySQL (MariaDB)` which can be used to create backups. To create a daily backup routine:
+
+### 1. Create a Backup Script
+  This is an example of a backup script in `Windows` operating system.
+  ```bat
+  @echo off
+  set TIMESTAMP=%date:~-4,4%-%date:~-10,2%-%date:~-7,2%
+  set BACKUP_DIR=...\path\to\backup\directory
+  set MYSQL_USER=your_username
+  set MYSQL_PASSWORD=your_password
+  set DATABASE_NAME=your_database_name
+  
+  mysqldump -u %MYSQL_USER% -p%MYSQL_PASSWORD% %DATABASE_NAME% > %BACKUP_DIR%\%DATABASE_NAME%-%TIMESTAMP%.sql
+  ```
+
+  To create a user account, run the following query:
+  ```sql
+  CREATE USER 'new_user'@'localhost' IDENTIFIED BY 'password';
+  GRANT 'role_name' TO 'new_user'@'localhost';
+  ```
+  - **Important**: `role_name` should be a valid  `ROLE` that has access to the whole database.
+### 2. Schedule Automated Backups
+  In `Windows`, use `Task Scheduler` to create a new task that runs the `backup.bat` daily.
