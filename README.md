@@ -840,4 +840,38 @@ DELIMITER ;
   ```
   When a `Book` is restored from `DeletedBook`, remove the `DeletedBook` row and `UPDATE` the `History` row to connect it with `Book` using `BookID`.
 
-## 
+## Setting Up SSL Security Protocol
+SSL (Secure Sockets Layer) encrypts and secures internet communication. There are several steps to set up and configure SSL for an `XAMPP` `Apache` server.
+- ### 1. Virtual Host
+  Open `httpd-vhosts.conf` located in `.../xampp/apache/conf/extra` and add the following lines at the end of the file:
+  ```conf
+  <VirtualHost *:80>
+    DocumentRoot ".../xampp/htdocs/dummy-host2.example.com"
+    ServerName dummy-host2.example.com
+    SSLEngine on
+    SSLCertificateFile "conf/ssl.crt/server.crt"
+    SSLCertificateKeyFile "conf/ssl.key/server.key"
+    <Directory ".../xampp/htdocs/">
+      Options All
+      AllowOverride All
+      Require all granted
+    </Directory>
+    ErrorLog "logs/dummy-host2.example.com-error.log"
+    CustomLog "logs/dummy-host2.example.com-access.log" common
+  </VirtualHost>
+  ```
+  
+- ### 2. Making a Certificate
+  `XAMPP` provides a way to create an SSL certificate. Run `makecert.bat` located in `.../xampp/apache` and fill in the terminal as needed.
+  ![makecert.bat](assets/makecert.png)
+  After the setup, the files `ssl.cst/server.cst` and `ssl.key/server.key` should be created in `.../xampp/apache/conf`. These are the files needed for `apache` to validate the security protocol.
+  
+- ### 3. Include Virtual Host
+  Open `httpd.conf` located in `.../xampp/apache/conf` and add the following line to the end of the file:
+  ```conf
+  Include conf/extra/httpd-vhosts.conf
+  ```
+
+- ### 4. Install Certificate
+  The `server.crt` has been created but not installed yet. To install, simply open the `server.crt` file inside `.../xampp/apache/conf`. This will bring about a certificate window
+  ~[Certificate setup 1](assets/cert1.png)
