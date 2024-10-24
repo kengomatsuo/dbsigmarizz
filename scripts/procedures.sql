@@ -437,4 +437,27 @@ BEGIN
   WHERE ID = NEW.ID;
 END $$
 
+CREATE PROCEDURE searchBook(
+  IN BookQuery VARCHAR(100)
+)
+BEGIN
+  SELECT Title, Name, Description
+  FROM Book 
+  JOIN Author
+  ON Book.AuthorID = Author.ID
+  WHERE MATCH (Title, Description) AGAINST (BookQuery IN BOOLEAN MODE)
+    OR MATCH (Name) AGAINST (BookQuery IN BOOLEAN MODE)
+    OR Title LIKE CONCAT(BookQuery, '%')
+    OR Name LIKE CONCAT(BookQuery, '%')
+  ORDER BY (CASE 
+      WHEN Title LIKE CONCAT(BookQuery, '%') THEN 4
+      WHEN Name LIKE CONCAT(BookQuery, '%') THEN 3
+      WHEN MATCH (Title, Description) AGAINST (BookQuery IN BOOLEAN MODE) THEN 2
+      WHEN MATCH (Name) AGAINST (BookQuery IN BOOLEAN MODE) THEN 1
+      ELSE 0
+    END) DESC,
+    (MATCH (Title, Description) AGAINST (BookQuery IN BOOLEAN MODE) +
+      MATCH (Name) AGAINST (BookQuery IN BOOLEAN MODE)) DESC;
+END $$
+
 DELIMITER ;

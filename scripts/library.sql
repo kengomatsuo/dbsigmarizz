@@ -11,7 +11,8 @@ CREATE TABLE
     CHECK (Name != ''),
     Birthdate DATE NOT NULL,
     CHECK (Birthdate > '0000-00-00'),
-    UNIQUE (Name, Birthdate)
+    UNIQUE (Name, Birthdate),
+    FULLTEXT (Name)
   ) ENGINE = InnoDB;
 
 CREATE INDEX idx_authorid ON Author (ID);
@@ -29,7 +30,8 @@ CREATE TABLE
     CHECK (ISBN REGEXP '^(978|979)-[0-9]{1,5}-[0-9]{1,7}-[0-9]{1,7}-[0-9]$'),
     FOREIGN KEY (AuthorID) REFERENCES Author (ID)
       ON UPDATE CASCADE 
-      ON DELETE RESTRICT
+      ON DELETE RESTRICT,
+    FULLTEXT (Title, Description)
   ) ENGINE = InnoDB;
 
 CREATE INDEX idx_bookid ON Book (ID);
@@ -74,8 +76,6 @@ CREATE TABLE
     ID CHAR(38) PRIMARY KEY DEFAULT CONCAT ('U-', UUID ()),
     Username VARCHAR(100) NOT NULL UNIQUE,
     CHECK (Username != ''),
-    Role VARCHAR(10) NOT NULL DEFAULT 'reader',
-    CHECK (Role = 'reader' OR Role = 'librarian' OR Role = 'admin'),
     Name VARCHAR(50) NOT NULL,
     CHECK (Name != ''),
     Address VARCHAR(200) NOT NULL,
