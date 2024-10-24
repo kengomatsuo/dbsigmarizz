@@ -5,7 +5,16 @@ This is a repository to store and document the process and results of creating a
 - [Resources](#resources)
 - [Normalization](#Normalization)
 - [Setup](#setup)
-- [Entity Relationship Diagram](#entity relationship diagram)
+- [Entity Relationship Diagram](#entity-relationship-diagram)
+- [Entities and Relationships](#entities-and-relationships)
+- [Indexing](#indexing)
+- [Storage Management](#storage-management)
+- [Transactions and Procedures](#transactions-and-procedures)
+- [Triggers](#triggers)
+- [Roles and Permissions](#roles-and-permissions)
+- [SSL Security Protocol](#ssl-security-protocol)
+- [Backup and Restore](#backup-and-restore)
+
 
 ## Resources
 - [Unnormalized Library Data](data/unnormalized_library_data(in).csv)
@@ -867,7 +876,7 @@ GRANT SELECT, INSERT ON library.Loan TO 'reader';
 GRANT SELECT ON library.History TO 'reader';
 ```
 
-## Setting Up SSL Security Protocol
+## SSL Security Protocol
 SSL (Secure Sockets Layer) encrypts and secures internet communication. By defult, the `Apache` server does not enable SSL. There are several steps to set up and configure SSL for an `XAMPP` `Apache` server.
 
 ### 1. Virtual Host
