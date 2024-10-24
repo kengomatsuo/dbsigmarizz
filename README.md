@@ -936,3 +936,13 @@ To be ready for disasters and unexpected circumstances, regular backups are need
   - **Important**: `role_name` should be a valid  `ROLE` that has access to the whole database.
 ### 2. Schedule Automated Backups
   In `Windows`, use `Task Scheduler` to create a new task that runs the `backup.bat` daily.
+
+  <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/backup1.png" width="600px" />
+  <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/backup2.png" width="600px" />
+  <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/backup3.png" width="600px" />
+  <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/backup4.png" width="600px" />
+  <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/backup5.png" width="600px" />
+  <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/backup6.png" width="600px" />
+  <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/backup7.png" width="600px" />
+
+  This concludes the Daily Backup routine setup.
