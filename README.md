@@ -376,6 +376,7 @@ To change the default sizes of each table, configure the `my.ini` file located i
 innodb_file_per_table=1
 innodb_data_home_dir=".../xampp/mysql/data"
 innodb_data_file_path=ibdata1:10M:autoextend
+innodb_autoextend_increment=20M
 innodb_log_group_home_dir=".../xampp/mysql/data"
 #innodb_log_arch_dir = ".../xampp/mysql/data"
 ## You can set .._buffer_pool_size up to 50 - 80 %
