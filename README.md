@@ -1,6 +1,10 @@
 # Library Management System - Road to Sigma Rizz DBA, for B27 database technology CS GC.
 This is a repository to store and document the process and results of creating a library database system from an unnormalized dataset file. This project is developed as part of the B26 Database Technology course. It involves designing and implementing a comprehensive database management system (DBMS) for a library. The system covers all core aspects of DBMS, from storage management and memory optimization to transactions, indexing, and security.
 
+## Table of Contents
+- [Resources](##Resources)
+- [Normalization](##Normalization)
+
 ## Resources
 - [Unnormalized Library Data](data/unnormalized_library_data(in).csv)
 
