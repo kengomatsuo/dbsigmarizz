@@ -841,7 +841,7 @@ DELIMITER ;
   When a `Book` is restored from `DeletedBook`, remove the `DeletedBook` row and `UPDATE` the `History` row to connect it with `Book` using `BookID`.
 
 ## Setting Up SSL Security Protocol
-SSL (Secure Sockets Layer) encrypts and secures internet communication. There are several steps to set up and configure SSL for an `XAMPP` `Apache` server.
+SSL (Secure Sockets Layer) encrypts and secures internet communication. By defult, the `Apache` server does not enable SSL. There are several steps to set up and configure SSL for an `XAMPP` `Apache` server.
 - ### 1. Virtual Host
   Open `httpd-vhosts.conf` located in `.../xampp/apache/conf/extra` and add the following lines at the end of the file:
   ```conf
@@ -863,6 +863,7 @@ SSL (Secure Sockets Layer) encrypts and secures internet communication. There ar
   
 - ### 2. Making a Certificate
   `XAMPP` provides a way to create an SSL certificate. Run `makecert.bat` located in `.../xampp/apache` and fill in the terminal as needed.
+  
   ![makecert.bat](assets/makecert.png)
   After the setup, the files `ssl.cst/server.cst` and `ssl.key/server.key` should be created in `.../xampp/apache/conf`. These are the files needed for `apache` to validate the security protocol.
   
@@ -874,4 +875,19 @@ SSL (Secure Sockets Layer) encrypts and secures internet communication. There ar
 
 - ### 4. Install Certificate
   The `server.crt` has been created but not installed yet. To install, simply open the `server.crt` file inside `.../xampp/apache/conf`. This will bring about a certificate window
-  ~[Certificate setup 1](assets/cert1.png)
+
+  <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/cert1.png" width="400px" />
+  
+  Click on `Install Certificate...` and follow the setup.
+
+  <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/cert2.png" width="400px" />
+  <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/cert3.png" width="400px" />
+  <img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/cert4.png" width="400px" />
+  
+Upon completion of the setup, accessing the `localhost` site without the `https://` prefx will show an error as such:
+
+<img src="https://raw.githubusercontent.com/kengomatsuo/dbsigmarizz/refs/heads/main/assets/cert5.png" width="400px" />
+
+This concludes the SSL encryption setup.
+
+## Backup and Restore
