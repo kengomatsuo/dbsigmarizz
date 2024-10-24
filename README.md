@@ -3,7 +3,9 @@ This is a repository to store and document the process and results of creating a
 
 ## Table of Contents
 - [Resources](#resources)
-- [Normalization](##Normalization)
+- [Normalization](#Normalization)
+- [Setup](#setup)
+- [Entity Relationship Diagram](#entity relationship diagram)
 
 ## Resources
 - [Unnormalized Library Data](data/unnormalized_library_data(in).csv)
