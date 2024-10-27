@@ -7,6 +7,7 @@ This is a repository to store and document the process and results of creating a
 - [Setup](#setup)
 - [Entity Relationship Diagram](#entity-relationship-diagram)
 - [Entities and Relationships](#entities-and-relationships)
+- [Importing Data](#importing-data)
 - [Indexing](#indexing)
 - [Storage Management](#storage-management)
 - [Transactions and Procedures](#transactions-and-procedures)
@@ -20,6 +21,7 @@ This is a repository to store and document the process and results of creating a
 - [Unnormalized Library Data](data/unnormalized_library_data(in).csv)
 
 ## Normalization
+
 |   Book_ID | Title                       | Author_Name      | Author_Birthdate   | ISBN              |   User_ID | User_Name           | User_Address                                               | Loan_Date   | Return_Date   |
 |----------:|:----------------------------|:-----------------|:-------------------|-------------------|----------:|:--------------------|:-----------------------------------------------------------|:------------|:--------------|
 |      3115 | Particularly charge nearly. | Anita Walker     | 11/1/1962          | 978-1-4223-8315-5 |      8425 | Tracey Kelly        | PSC 6481, Box 1952, APO AA 89825                           | 4/9/2024    | 8/21/2024     |
@@ -277,6 +279,90 @@ CREATE TABLE
   ```
 - **Relationships**:
   - The `History` entity logs past loans, showing which `User` borrowed which `Book`, and when.
+
+## Importing Data
+A single `.csv` file could not  directly imported into several tables at once. In order to order them into their respective tables, there are several steps to complete:
+
+### 1. Create Temporary Table
+  Create a temporary table to store the values in the given [data file](data/unnormalized_library_data(in).csv). The amount of columns in the table must be equal to the amount of columns in the data file. The engine used is `MEMORY`, since it is the best one to use for temporary tables.
+  ```sql
+  CREATE TABLE
+    Imported (
+      OldBookID CHAR(4),
+      BookTitle VARCHAR(100),
+      AuthorName VARCHAR(50),
+      AuthorBirthdate VARCHAR(10),
+      ISBN CHAR(17),
+      OldUserID CHAR(4),
+      UserName VARCHAR(50),
+      UserAddress VARCHAR(200),
+      LoanDate VARCHAR(10),
+      ReturnDate VARCHAR(10)
+  ) ENGINE = MEMORY;
+  ```
+
+### 2. Load Data
+  Import the data file using the `LOAD DATA INFILE` statement.
+  ```sql
+  LOAD DATA INFILE '.../unnormalized_library_data(in).csv'
+    INTO TABLE Imported
+    FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+    LINES TERMINATED BY '\n'
+    IGNORE 1 LINES;
+  ```
+
+### 3. Migrate Values
+  From the table `Imported`, `INSERT` the values into their own respective tables, and maintain `FOREIGN KEY`s and follow each table's constraints.
+  ```sql
+  INSERT INTO Author (Name, Birthdate)
+  SELECT DISTINCT AuthorName, STR_TO_DATE(AuthorBirthdate, '%c/%e/%Y') 
+  FROM Imported
+  ON DUPLICATE KEY UPDATE Name=Name;
+  
+  INSERT INTO Book (AuthorID, Title, ISBN)
+  SELECT DISTINCT
+    Author.ID,
+    Imported.BookTitle,
+    Imported.ISBN
+  FROM Imported
+  LEFT JOIN Author
+    ON Author.Name = Imported.AuthorName
+    AND Author.Birthdate = STR_TO_DATE(Imported.AuthorBirthdate, '%c/%e/%Y') 
+  WHERE Author.ID IS NOT NULL
+  ON DUPLICATE KEY UPDATE Title=Title;
+  
+  INSERT INTO Stock (BookID, Stock, InitialStock)
+  SELECT ID, 
+    @random_number := FLOOR(1+(RAND() * 15)),
+    @random_number 
+  FROM Book;
+  
+  INSERT INTO `User` (Username, Name, Address, Password)
+  SELECT DISTINCT 
+    LOWER(REPLACE(Imported.UserName, ' ', '')), 
+    Imported.UserName, 
+    UserAddress, 
+    SHA2(LOWER(REPLACE(Imported.UserName, ' ', '')), 256)
+  FROM Imported
+  ON DUPLICATE KEY UPDATE User.Username=User.Username;
+  
+  INSERT INTO History (BookID, UserID, LoanDate, ReturnDate)
+  SELECT
+    Book.ID,
+    User.ID,
+    STR_TO_DATE(Imported.LoanDate, '%c/%e/%Y') ,
+    STR_TO_DATE(Imported.ReturnDate, '%c/%e/%Y') 
+  FROM Imported
+  LEFT JOIN Book
+    ON Book.ISBN = Imported.ISBN
+  LEFT JOIN User 
+    ON User.Username = LOWER(REPLACE(Imported.UserName, ' ', ''))
+  WHERE Book.ID IS NOT NULL AND User.ID IS NOT NULL;
+  ```
+
+### 4. Remove Temporary Table
+After all is done, remove the temporary table using the following statement:
+```sql DROP TABLE Imported```
 
 ## Indexing
 For a **faster** and more **efficient** data retrieval when querying, columns which are checked using `WHERE` statements (or any that could be used for searching purposes) are `INDEX`ed at the cost of slower `INSERT` and `UPDATE`.
