@@ -367,18 +367,11 @@ After all is done, remove the temporary table using the following statement:
 ## Indexing
 For a **faster** and more **efficient** data retrieval when querying, columns which are checked using `WHERE` statements (or any that could be used for searching purposes) are `INDEX`ed at the cost of slower `INSERT` and `UPDATE`.
 
-- **Author**:
-  ```sql
-  CREATE INDEX idx_authorid ON Author (ID);
-  ```
-  - `idx_authorid`: For faster querying of author information by `ID`. (e.g., Displaying author's `Name` and `Birthdate` when opening a book).
 - **Book**:
   ```sql
-  CREATE INDEX idx_bookid ON Book (ID);
   CREATE INDEX idx_bookauthorid ON Book (AuthorID);
   CREATE INDEX idx_bookisbn ON Book (ISBN);
   ```
-  - `idx_bookid`: Allows faster retrieval of book data from a `Reservation` or `Loan`.
   - `idx_bookauthorid`: Useful for when looking up books written by a specific author by `ID`.
   - `idx_bookisbn`: Speeds up searching for books from its `ISBN`, unique identifiers ofen used for searching or verifying book details.
 - **Stock**:
@@ -393,10 +386,8 @@ For a **faster** and more **efficient** data retrieval when querying, columns wh
   - `idx_deletedisbn`: For faster checking when inserting a new `Book`. If there is a `DeletedBook` with the same `ISBN` of the new `Book`, restore the `DeletedBook` instead. 
 - **User**:
   ```sql
-  CREATE INDEX idx_userid ON `User` (ID);
   CREATE INDEX idx_username ON `User` (Username);
   ```
-  - `idx_userid`: Similar to `idx_bookid`.
   - `idx_username`: Speeds up searches by `Username`, which is helpful for user authentication and profile lookup.
 - **Reservation**:
   ```sql
